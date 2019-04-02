@@ -56,7 +56,7 @@ func TestSimpleLogger(t *testing.T) {
 	require.Equal(t, "public-api", jsonMap["service"])
 	require.Equal(t, "logger.TestSimpleLogger", jsonMap["function"])
 	require.Equal(t, "Service initialized", jsonMap["message"])
-	require.Regexp(t, "logger/basic_logger_test.go", jsonMap["source"])
+	require.Regexp(t, "logger/logger_test.go", jsonMap["source"])
 	require.NotNil(t, jsonMap["timestamp"])
 }
 
@@ -159,7 +159,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "some-int-value=12", out)
 	require.Regexp(t, "function=logger.TestCustomLogFormatter", out)
 	// FIXME source
-	require.Regexp(t, "source=.*logger/basic_logger_test.go", out)
+	require.Regexp(t, "source=.*logger/logger_test.go", out)
 	require.Regexp(t, "_test-id=hello", out)
 	require.Regexp(t, "_underscore=wow", out)
 }

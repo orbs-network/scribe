@@ -13,16 +13,16 @@ import (
 	"strings"
 )
 
-type BasicLogger interface {
+type Logger interface {
 	Log(level string, message string, params ...*Field)
 	LogFailedExpectation(message string, expected *Field, actual *Field, params ...*Field)
 	Info(message string, params ...*Field)
 	Error(message string, params ...*Field)
 	Metric(params ...*Field)
-	WithTags(params ...*Field) BasicLogger
+	WithTags(params ...*Field) Logger
 	Tags() []*Field
-	WithOutput(writer ...Output) BasicLogger
-	WithFilters(filter ...Filter) BasicLogger
+	WithOutput(writer ...Output) Logger
+	WithFilters(filter ...Filter) Logger
 	Filters() []Filter
 }
 
@@ -34,7 +34,7 @@ type basicLogger struct {
 	filters               []Filter
 }
 
-func GetLogger(params ...*Field) BasicLogger {
+func GetLogger(params ...*Field) Logger {
 	logger := &basicLogger{
 		tags:         params,
 		nestingLevel: 4,
@@ -89,7 +89,7 @@ func (b *basicLogger) Tags() []*Field {
 	return b.tags
 }
 
-func (b *basicLogger) WithTags(params ...*Field) BasicLogger {
+func (b *basicLogger) WithTags(params ...*Field) Logger {
 	newTags := make([]*Field, len(b.tags))
 	copy(newTags, b.tags)
 	newTags = append(newTags, params...)
@@ -138,12 +138,12 @@ func (b *basicLogger) LogFailedExpectation(message string, expected *Field, actu
 	b.Log("expectation", message, newParams...)
 }
 
-func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {
+func (b *basicLogger) WithOutput(writers ...Output) Logger {
 	b.outputs = writers
 	return b
 }
 
-func (b *basicLogger) WithFilters(filter ...Filter) BasicLogger {
+func (b *basicLogger) WithFilters(filter ...Filter) Logger {
 	b.filters = append(b.filters, filter...) // this is not thread safe, I know
 	return b
 }

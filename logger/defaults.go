@@ -10,11 +10,11 @@ import (
 	"testing"
 )
 
-func DefaultTestingLogger(tb testing.TB) BasicLogger {
+func DefaultTestingLogger(tb testing.TB) Logger {
 	return GetLogger().WithOutput(NewTestOutput(tb, NewHumanReadableFormatter()))
 }
 
-func DefaultTestingLoggerAllowingErrors(tb testing.TB, errorPattern string) BasicLogger {
+func DefaultTestingLoggerAllowingErrors(tb testing.TB, errorPattern string) Logger {
 	output := NewTestOutput(tb, NewHumanReadableFormatter())
 	output.AllowErrorsMatching(errorPattern)
 	return GetLogger().WithOutput(output)
