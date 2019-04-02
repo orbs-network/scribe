@@ -95,21 +95,6 @@ func TestBasicLogger_WithFilter(t *testing.T) {
 	require.Empty(t, b.String(), "output was not empty")
 }
 
-func TestCompareLogger(t *testing.T) {
-	b := new(bytes.Buffer)
-	GetLogger().WithOutput(NewFormattingOutput(b, NewJsonFormatter())).
-		LogFailedExpectation("Service initialized compare",
-			Int("block-height", 9999), Int("block-height", 8888),
-			Bytes("bytes", []byte{2, 3, 99}))
-
-	jsonMap := parseOutput(b.String())
-
-	require.Equal(t, "expectation", jsonMap["level"])
-	require.Equal(t, "020363", jsonMap["bytes"])
-	require.Equal(t, float64(8888), jsonMap["actual-block-height"])
-	require.Equal(t, float64(9999), jsonMap["expected-block-height"])
-}
-
 func TestNestedLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 
