@@ -9,7 +9,6 @@ package log
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"reflect"
 	"time"
 )
@@ -80,14 +79,6 @@ func Stringable(key string, value fmt.Stringer) *Field {
 	return &Field{Key: key, StringVal: value.String(), Type: StringType}
 }
 
-func Transaction(txHash primitives.Sha256) *Field {
-	return Stringable("txHash", txHash)
-}
-
-func Query(queryHash primitives.Sha256) *Field {
-	return Stringable("queryHash", queryHash)
-}
-
 func StringableSlice(key string, values interface{}) *Field {
 	var strings []string
 	switch reflect.TypeOf(values).Kind() {
@@ -142,10 +133,6 @@ func Float64(key string, value float64) *Field {
 	return &Field{Key: key, Float: value, Type: FloatType}
 }
 
-func TimestampNano(key string, value primitives.TimestampNano) *Field {
-	return &Field{Key: key, Int: int64(value), Type: TimeType}
-}
-
 func Timestamp(key string, value time.Time) *Field {
 	return &Field{Key: key, Int: value.UnixNano(), Type: TimeType}
 }
@@ -155,14 +142,6 @@ func Error(value error) *Field {
 		panic("error field must have non-nil error value")
 	}
 	return &Field{Key: "error", Error: value, Type: ErrorType}
-}
-
-func BlockHeight(value primitives.BlockHeight) *Field {
-	return &Field{Key: "block-height", Uint: uint64(value), Type: UintType}
-}
-
-func VirtualChainId(value primitives.VirtualChainId) *Field {
-	return &Field{Key: "vcid", Uint: uint64(value), Type: UintType}
 }
 
 func (f *Field) Value() interface{} {

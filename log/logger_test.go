@@ -46,7 +46,7 @@ func TestBasicLogger_WithTags_ClonesLoggerFully(t *testing.T) {
 
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	GetLogger(Node("node1"), VirtualChainId(primitives.VirtualChainId(999)), Service("public-api")).WithOutput(NewFormattingOutput(b, NewJsonFormatter())).Info("Service initialized")
+	GetLogger(Node("node1"), Int("vcid", 999), Service("public-api")).WithOutput(NewFormattingOutput(b, NewJsonFormatter())).Info("Service initialized")
 
 	jsonMap := parseOutput(b.String())
 
@@ -98,7 +98,9 @@ func TestBasicLogger_WithFilter(t *testing.T) {
 func TestCompareLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 	GetLogger().WithOutput(NewFormattingOutput(b, NewJsonFormatter())).
-		LogFailedExpectation("Service initialized compare", BlockHeight(primitives.BlockHeight(9999)), BlockHeight(primitives.BlockHeight(8888)), Bytes("bytes", []byte{2, 3, 99}))
+		LogFailedExpectation("Service initialized compare",
+			Int("block-height", 9999), Int("block-height", 8888),
+			Bytes("bytes", []byte{2, 3, 99}))
 
 	jsonMap := parseOutput(b.String())
 
@@ -126,13 +128,13 @@ func TestNestedLogger(t *testing.T) {
 
 func TestStringableSlice(t *testing.T) {
 	b := new(bytes.Buffer)
-	var receipts = []primitives.BlockHeight{primitives.BlockHeight(123), primitives.BlockHeight(321)}
+	var receipts = []stringable{{"hello"}, {"darkness"}}
 
 	GetLogger().WithOutput(NewFormattingOutput(b, NewJsonFormatter())).Info("StringableSlice test", StringableSlice("a-collection", receipts))
 
 	jsonMap := parseOutput(b.String())
 
-	require.Equal(t, []interface{}{"7b", "141"}, jsonMap["a-collection"])
+	require.Equal(t, []interface{}{"hello", "darkness"}, jsonMap["a-collection"])
 }
 
 func TestCustomLogFormatter(t *testing.T) {
@@ -141,7 +143,7 @@ func TestCustomLogFormatter(t *testing.T) {
 		WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter()))
 	serviceLogger.Info("Service initialized",
 		Int("some-int-value", 12),
-		BlockHeight(primitives.BlockHeight(9999)),
+		Int("block-height", 9999),
 		Bytes("bytes", []byte{2, 3, 99}),
 		Stringable("vchainId", primitives.VirtualChainId(123)),
 		String("_test-id", "hello"),
@@ -179,7 +181,7 @@ func TestHumanReadable_AggregateField(t *testing.T) {
 
 func TestHumanReadableFormatterFormatWithStringableSlice(t *testing.T) {
 	b := new(bytes.Buffer)
-	var receipts = []primitives.BlockHeight{primitives.BlockHeight(123), primitives.BlockHeight(321)}
+	var receipts = []stringable{{"hello"}, {"darkness"}}
 
 	GetLogger(Node("node1"), Service("public-api")).WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter())).
 		Info("StringableSlice HR test", StringableSlice("a-collection", receipts))
@@ -187,8 +189,8 @@ func TestHumanReadableFormatterFormatWithStringableSlice(t *testing.T) {
 	out := b.String()
 
 	require.Regexp(t, "a-collection=", out)
-	require.Regexp(t, `"7b"`, out)
-	require.Regexp(t, `"141"`, out)
+	require.Regexp(t, `"hello"`, out)
+	require.Regexp(t, `"darkness"`, out)
 }
 
 func TestMultipleOutputs(t *testing.T) {
@@ -284,4 +286,12 @@ func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
 			b.StopTimer()
 		})
 	}
+}
+
+type stringable struct {
+	value string
+}
+
+func (s stringable) String() string {
+	return s.value
 }

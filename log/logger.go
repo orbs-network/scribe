@@ -15,6 +15,7 @@ import (
 
 type Logger interface {
 	Log(level string, message string, params ...*Field)
+	// FIXME deprecate
 	LogFailedExpectation(message string, expected *Field, actual *Field, params ...*Field)
 	Info(message string, params ...*Field)
 	Error(message string, params ...*Field)

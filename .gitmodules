@@ -13,9 +13,6 @@
 [submodule "vendor/github.com/orbs-network/go-mock"]
 	path = vendor/github.com/orbs-network/go-mock
 	url = https://github.com/orbs-network/go-mock
-[submodule "vendor/github.com/orbs-network/orbs-spec"]
-	path = vendor/github.com/orbs-network/orbs-spec
-	url = https://github.com/orbs-network/orbs-spec
 [submodule "vendor/github.com/pkg/errors"]
 	path = vendor/github.com/pkg/errors
 	url = https://github.com/pkg/errors
