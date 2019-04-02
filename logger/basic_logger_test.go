@@ -4,18 +4,12 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package log_test
+package logger
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/test/builders"
-	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
@@ -37,22 +31,22 @@ func parseOutput(input string) map[string]interface{} {
 }
 
 func TestBasicLogger_WithTags_ClonesLoggerFully(t *testing.T) {
-	v1 := log.String("k1", "v1")
-	v2 := log.String("c1", "v2")
-	v3 := log.String("c2", "v3")
+	v1 := String("k1", "v1")
+	v2 := String("c1", "v2")
+	v3 := String("c2", "v3")
 
-	parent := log.GetLogger(v1)
+	parent := GetLogger(v1)
 	child1 := parent.WithTags(v2)
 	child2 := parent.WithTags(v3)
 
-	require.ElementsMatch(t, []*log.Field{v1}, parent.Tags())
-	require.ElementsMatch(t, []*log.Field{v1, v2}, child1.Tags())
-	require.ElementsMatch(t, []*log.Field{v1, v3}, child2.Tags())
+	require.ElementsMatch(t, []*Field{v1}, parent.Tags())
+	require.ElementsMatch(t, []*Field{v1, v2}, child1.Tags())
+	require.ElementsMatch(t, []*Field{v1, v3}, child2.Tags())
 }
 
 func TestSimpleLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger(log.Node("node1"), log.VirtualChainId(primitives.VirtualChainId(999)), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("Service initialized")
+	GetLogger(Node("node1"), VirtualChainId(primitives.VirtualChainId(999)), Service("public-api")).WithOutput(NewFormattingOutput(b, NewJsonFormatter())).Info("Service initialized")
 
 	jsonMap := parseOutput(b.String())
 
@@ -60,54 +54,51 @@ func TestSimpleLogger(t *testing.T) {
 	require.Equal(t, "node1", jsonMap["node"])
 	require.Equal(t, 999.0, jsonMap["vcid"]) // because golang JSON parser decodes ints as float64
 	require.Equal(t, "public-api", jsonMap["service"])
-	require.Equal(t, "log_test.TestSimpleLogger", jsonMap["function"])
+	require.Equal(t, "logger.TestSimpleLogger", jsonMap["function"])
 	require.Equal(t, "Service initialized", jsonMap["message"])
-	require.Regexp(t, "^instrumentation/log/basic_logger_test.go", jsonMap["source"])
+	require.Regexp(t, "logger/basic_logger_test.go", jsonMap["source"])
 	require.NotNil(t, jsonMap["timestamp"])
 }
 
 func TestSimpleLogger_AggregateField(t *testing.T) {
-	ctx := trace.NewContext(context.Background(), "foo")
+	aggregatedFields := Aggregate("music", String("Artist", "Iggy Pop"), String("Song", "Passenger"))
 	b := new(bytes.Buffer)
-	log.GetLogger().
-		WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
-		Info("bar", trace.LogFieldFrom(ctx))
+	GetLogger().
+		WithOutput(NewFormattingOutput(b, NewJsonFormatter())).
+		Info("bar", aggregatedFields)
 
 	jsonMap := parseOutput(b.String())
 
-	require.Equal(t, "foo", jsonMap["entry-point"])
-	require.NotEmpty(t, jsonMap[trace.RequestId])
-
+	require.Equal(t, "Iggy Pop", jsonMap["Artist"])
+	require.Equal(t, "Passenger", jsonMap["Song"])
 }
 
 func TestSimpleLogger_AggregateField_NestedLogger(t *testing.T) {
-	ctx := trace.NewContext(context.Background(), "foo")
+	aggregatedFields := Aggregate("music", String("Artist", "Iggy Pop"), String("Song", "Passenger"))
 	b := new(bytes.Buffer)
-	log.GetLogger(log.String("k1", "v1")).
-		WithTags(trace.LogFieldFrom(ctx)).
-		WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
+	GetLogger(String("k1", "v1")).
+		WithTags(aggregatedFields).
+		WithOutput(NewFormattingOutput(b, NewJsonFormatter())).
 		Info("bar")
 
 	jsonMap := parseOutput(b.String())
 
-	require.Equal(t, "foo", jsonMap["entry-point"])
-	require.Equal(t, "v1", jsonMap["k1"])
-	require.NotEmpty(t, jsonMap[trace.RequestId])
-
+	require.Equal(t, "Iggy Pop", jsonMap["Artist"])
+	require.Equal(t, "Passenger", jsonMap["Song"])
 }
 
 func TestBasicLogger_WithFilter(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
-		WithFilters(log.OnlyErrors()).
+	GetLogger().WithOutput(NewFormattingOutput(b, NewJsonFormatter())).
+		WithFilters(OnlyErrors()).
 		Info("foo")
 	require.Empty(t, b.String(), "output was not empty")
 }
 
 func TestCompareLogger(t *testing.T) {
 	b := new(bytes.Buffer)
-	log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).
-		LogFailedExpectation("Service initialized compare", log.BlockHeight(primitives.BlockHeight(9999)), log.BlockHeight(primitives.BlockHeight(8888)), log.Bytes("bytes", []byte{2, 3, 99}))
+	GetLogger().WithOutput(NewFormattingOutput(b, NewJsonFormatter())).
+		LogFailedExpectation("Service initialized compare", BlockHeight(primitives.BlockHeight(9999)), BlockHeight(primitives.BlockHeight(8888)), Bytes("bytes", []byte{2, 3, 99}))
 
 	jsonMap := parseOutput(b.String())
 
@@ -120,9 +111,9 @@ func TestCompareLogger(t *testing.T) {
 func TestNestedLogger(t *testing.T) {
 	b := new(bytes.Buffer)
 
-	txId := log.String("txId", "1234567")
-	txFlowLogger := log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).WithTags(log.String("flow", TransactionFlow))
-	txFlowLogger.Info(TransactionAccepted, txId, log.Bytes("payload", []byte{1, 2, 3, 99, 250}))
+	txId := String("txId", "1234567")
+	txFlowLogger := GetLogger().WithOutput(NewFormattingOutput(b, NewJsonFormatter())).WithTags(String("flow", TransactionFlow))
+	txFlowLogger.Info(TransactionAccepted, txId, Bytes("payload", []byte{1, 2, 3, 99, 250}))
 
 	jsonMap := parseOutput(b.String())
 
@@ -135,29 +126,26 @@ func TestNestedLogger(t *testing.T) {
 
 func TestStringableSlice(t *testing.T) {
 	b := new(bytes.Buffer)
-	var receipts = []*protocol.TransactionReceipt{builders.TransactionReceipt().Build(), builders.TransactionReceipt().Build()}
+	var receipts = []primitives.BlockHeight{primitives.BlockHeight(123), primitives.BlockHeight(321)}
 
-	log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter())).Info("StringableSlice test", log.StringableSlice("a-collection", receipts))
+	GetLogger().WithOutput(NewFormattingOutput(b, NewJsonFormatter())).Info("StringableSlice test", StringableSlice("a-collection", receipts))
 
 	jsonMap := parseOutput(b.String())
 
-	require.Equal(t, []interface{}{
-		"{Txhash:ab2eccdf91e87771d6a8a5a37a6d26a9a220f78b3aa0662842b682a869e0819a,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
-		"{Txhash:ab2eccdf91e87771d6a8a5a37a6d26a9a220f78b3aa0662842b682a869e0819a,ExecutionResult:EXECUTION_RESULT_SUCCESS,OutputArgumentArray:,OutputEventsArray:,}",
-	}, jsonMap["a-collection"])
+	require.Equal(t, []interface{}{"7b", "141"}, jsonMap["a-collection"])
 }
 
 func TestCustomLogFormatter(t *testing.T) {
 	b := new(bytes.Buffer)
-	serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()))
+	serviceLogger := GetLogger(Node("node1"), Service("public-api")).
+		WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter()))
 	serviceLogger.Info("Service initialized",
-		log.Int("some-int-value", 12),
-		log.BlockHeight(primitives.BlockHeight(9999)),
-		log.Bytes("bytes", []byte{2, 3, 99}),
-		log.Stringable("vchainId", primitives.VirtualChainId(123)),
-		log.String("_test-id", "hello"),
-		log.String("_underscore", "wow"))
+		Int("some-int-value", 12),
+		BlockHeight(primitives.BlockHeight(9999)),
+		Bytes("bytes", []byte{2, 3, 99}),
+		Stringable("vchainId", primitives.VirtualChainId(123)),
+		String("_test-id", "hello"),
+		String("_underscore", "wow"))
 
 	out := b.String()
 
@@ -169,36 +157,38 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "vchainId=7b", out)
 	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
-	require.Regexp(t, "function=log_test.TestCustomLogFormatter", out)
-	require.Regexp(t, "source=instrumentation/log/basic_logger_test.go", out)
+	require.Regexp(t, "function=logger.TestCustomLogFormatter", out)
+	// FIXME source
+	require.Regexp(t, "source=.*logger/basic_logger_test.go", out)
 	require.Regexp(t, "_test-id=hello", out)
 	require.Regexp(t, "_underscore=wow", out)
 }
 
 func TestHumanReadable_AggregateField(t *testing.T) {
-	ctx := trace.NewContext(context.Background(), "foo")
+	aggregatedFields := Aggregate("music", String("Artist", "Iggy Pop"), String("Song", "Passenger"))
 	b := new(bytes.Buffer)
-	log.GetLogger().
-		WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter())).
-		Info("bar", trace.LogFieldFrom(ctx))
+	GetLogger().
+		WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter())).
+		Info("bar", aggregatedFields)
 
 	out := b.String()
-	require.Regexp(t, "entry-point=foo", out)
-	require.Regexp(t, trace.RequestId+"=foo.*", out)
+	require.Regexp(t, "Artist=Iggy Pop", out)
+	require.Regexp(t, "Song=Passenger", out)
 
 }
 
 func TestHumanReadableFormatterFormatWithStringableSlice(t *testing.T) {
 	b := new(bytes.Buffer)
-	transactions := []*protocol.SignedTransaction{builders.TransferTransaction().Build()}
+	var receipts = []primitives.BlockHeight{primitives.BlockHeight(123), primitives.BlockHeight(321)}
 
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter())).
-		Info("StringableSlice HR test", log.StringableSlice("a-collection", transactions))
+	GetLogger(Node("node1"), Service("public-api")).WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter())).
+		Info("StringableSlice HR test", StringableSlice("a-collection", receipts))
 
 	out := b.String()
 
 	require.Regexp(t, "a-collection=", out)
-	require.Regexp(t, "{Transaction:{ProtocolVersion:1,", out)
+	require.Regexp(t, `"7b"`, out)
+	require.Regexp(t, `"141"`, out)
 }
 
 func TestMultipleOutputs(t *testing.T) {
@@ -212,7 +202,7 @@ func TestMultipleOutputs(t *testing.T) {
 
 	b := new(bytes.Buffer)
 
-	log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewJsonFormatter()), log.NewFormattingOutput(fileOutput, log.NewJsonFormatter())).
+	GetLogger(Node("node1"), Service("public-api")).WithOutput(NewFormattingOutput(b, NewJsonFormatter()), NewFormattingOutput(fileOutput, NewJsonFormatter())).
 		Info("Service initialized")
 
 	rawFile, _ := ioutil.ReadFile(tempFile.Name())
@@ -224,7 +214,7 @@ func TestMultipleOutputs(t *testing.T) {
 		require.Equal(t, "info", jsonMap["level"])
 		require.Equal(t, "node1", jsonMap["node"])
 		require.Equal(t, "public-api", jsonMap["service"])
-		require.Equal(t, "log_test.TestMultipleOutputs", jsonMap["function"])
+		require.Equal(t, "logger.TestMultipleOutputs", jsonMap["function"])
 		require.Equal(t, "Service initialized", jsonMap["message"])
 		require.NotEmpty(t, jsonMap["source"])
 		require.NotNil(t, jsonMap["timestamp"])
@@ -246,36 +236,30 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 	fileOutput, _ := os.Create(tempFile.Name())
 
 	require.NotPanics(t, func() {
-		log.GetLogger(log.Node("node1"), log.Service("public-api")).WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()), log.NewFormattingOutput(fileOutput, log.NewJsonFormatter())).
+		GetLogger(Node("node1"), Service("public-api")).WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter()), NewFormattingOutput(fileOutput, NewJsonFormatter())).
 			Info("Service initialized")
 	})
 }
 
 func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
-	f := log.NewJsonFormatter().WithTimestampColumn("@timestamp")
+	f := NewJsonFormatter().WithTimestampColumn("@timestamp")
 	row := f.FormatRow(time.Now(), "info", "hello")
 
 	require.Regexp(t, "@timestamp", row)
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
-	ctrlRand := rand.NewControlledRand(b)
-
-	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-	}
-
-	formatters := []log.LogFormatter{log.NewHumanReadableFormatter(), log.NewJsonFormatter()}
+	collection := []string{"David Bowie", "Diamond Dogs"}
+	formatters := []LogFormatter{NewHumanReadableFormatter(), NewJsonFormatter()}
 
 	for _, formatter := range formatters {
 		b.Run(reflect.TypeOf(formatter).String(), func(b *testing.B) {
-			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-				WithOutput(log.NewFormattingOutput(ioutil.Discard, log.NewJsonFormatter()))
+			serviceLogger := GetLogger(Node("node1"), Service("public-api")).
+				WithOutput(NewFormattingOutput(ioutil.Discard, NewJsonFormatter()))
 
 			b.StartTimer()
 			for i := 0; i < b.N; i++ {
-				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+				serviceLogger.Info("Benchmark test", StringableSlice("a-collection", collection))
 			}
 			b.StopTimer()
 		})
@@ -284,24 +268,18 @@ func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
 }
 
 func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
-	ctrlRand := rand.NewControlledRand(b)
-
-	receipts := []*protocol.TransactionReceipt{
-		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
-	}
-
+	collection := []string{"David Bowie", "Diamond Dogs"}
 	outputs := []io.Writer{os.Stdout, ioutil.Discard}
 
 	for _, output := range outputs {
 		b.Run(reflect.TypeOf(output).String(), func(b *testing.B) {
 
-			serviceLogger := log.GetLogger(log.Node("node1"), log.Service("public-api")).
-				WithOutput(log.NewFormattingOutput(output, log.NewHumanReadableFormatter()))
+			serviceLogger := GetLogger(Node("node1"), Service("public-api")).
+				WithOutput(NewFormattingOutput(output, NewHumanReadableFormatter()))
 
 			b.StartTimer()
 			for i := 0; i < b.N; i++ {
-				serviceLogger.Info("Benchmark test", log.StringableSlice("a-collection", receipts))
+				serviceLogger.Info("Benchmark test", StringableSlice("a-collection", collection))
 			}
 			b.StopTimer()
 		})

@@ -1,0 +1,24 @@
+[submodule "vendor/github.com/go-playground/ansi"]
+	path = vendor/github.com/go-playground/ansi
+	url = https://github.com/go-playground/ansi
+[submodule "vendor/github.com/google/go-cmp"]
+	path = vendor/github.com/google/go-cmp
+	url = https://github.com/google/go-cmp
+[submodule "vendor/github.com/kr/pretty"]
+	path = vendor/github.com/kr/pretty
+	url = https://github.com/kr/pretty
+[submodule "vendor/github.com/kr/text"]
+	path = vendor/github.com/kr/text
+	url = https://github.com/kr/text
+[submodule "vendor/github.com/orbs-network/go-mock"]
+	path = vendor/github.com/orbs-network/go-mock
+	url = https://github.com/orbs-network/go-mock
+[submodule "vendor/github.com/orbs-network/orbs-spec"]
+	path = vendor/github.com/orbs-network/orbs-spec
+	url = https://github.com/orbs-network/orbs-spec
+[submodule "vendor/github.com/pkg/errors"]
+	path = vendor/github.com/pkg/errors
+	url = https://github.com/pkg/errors
+[submodule "vendor/github.com/stretchr/testify"]
+	path = vendor/github.com/stretchr/testify
+	url = https://github.com/stretchr/testify

@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package log
+package logger
 
 import (
 	"encoding/hex"
@@ -211,4 +211,16 @@ func (f *Field) IsNested() bool {
 
 func (f *Field) String() string {
 	return fmt.Sprintf("Field: key=%s, value=%v", f.Key, f.Value())
+}
+
+func Aggregate(name string, fields ...*Field) *Field {
+	return &Field{Key: name, Nested: &aggregateField{fields: fields}, Type: AggregateType}
+}
+
+type aggregateField struct {
+	fields []*Field
+}
+
+func (f *aggregateField) NestedFields() []*Field {
+	return f.fields
 }
