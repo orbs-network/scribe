@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package logger
+package log
 
 import (
 	"bytes"
@@ -54,9 +54,9 @@ func TestSimpleLogger(t *testing.T) {
 	require.Equal(t, "node1", jsonMap["node"])
 	require.Equal(t, 999.0, jsonMap["vcid"]) // because golang JSON parser decodes ints as float64
 	require.Equal(t, "public-api", jsonMap["service"])
-	require.Equal(t, "logger.TestSimpleLogger", jsonMap["function"])
+	require.Equal(t, "log.TestSimpleLogger", jsonMap["function"])
 	require.Equal(t, "Service initialized", jsonMap["message"])
-	require.Regexp(t, "logger/logger_test.go", jsonMap["source"])
+	require.Regexp(t, "log/logger_test.go", jsonMap["source"])
 	require.NotNil(t, jsonMap["timestamp"])
 }
 
@@ -157,9 +157,9 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "vchainId=7b", out)
 	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
-	require.Regexp(t, "function=logger.TestCustomLogFormatter", out)
+	require.Regexp(t, "function=log.TestCustomLogFormatter", out)
 	// FIXME source
-	require.Regexp(t, "source=.*logger/logger_test.go", out)
+	require.Regexp(t, "source=.*log/logger_test.go", out)
 	require.Regexp(t, "_test-id=hello", out)
 	require.Regexp(t, "_underscore=wow", out)
 }
@@ -214,7 +214,7 @@ func TestMultipleOutputs(t *testing.T) {
 		require.Equal(t, "info", jsonMap["level"])
 		require.Equal(t, "node1", jsonMap["node"])
 		require.Equal(t, "public-api", jsonMap["service"])
-		require.Equal(t, "logger.TestMultipleOutputs", jsonMap["function"])
+		require.Equal(t, "log.TestMultipleOutputs", jsonMap["function"])
 		require.Equal(t, "Service initialized", jsonMap["message"])
 		require.NotEmpty(t, jsonMap["source"])
 		require.NotNil(t, jsonMap["timestamp"])
