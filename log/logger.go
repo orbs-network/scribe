@@ -23,6 +23,7 @@ type Logger interface {
 	WithOutput(writer ...Output) Logger
 	WithFilters(filter ...Filter) Logger
 	Filters() []Filter
+	WithSourcePrefix(packageName string) Logger
 }
 
 type basicLogger struct {
@@ -38,7 +39,14 @@ func GetLogger(params ...*Field) Logger {
 		tags:         params,
 		nestingLevel: 4,
 		outputs:      []Output{&basicOutput{writer: os.Stdout, formatter: NewHumanReadableFormatter()}},
+		sourceRootPrefixIndex: getSourceRootPrefixIndex("orbs-network-go/"),
 	}
+
+	return logger
+}
+
+func getSourceRootPrefixIndex(packageName string) int {
+	index := 0
 
 	fpcs := make([]uintptr, 2)
 	n := runtime.Callers(0, fpcs)
@@ -47,8 +55,8 @@ func GetLogger(params ...*Field) Logger {
 
 		for {
 			frame, more := frames.Next()
-			if l := strings.Index(frame.File, "orbs-network-go/"); l > -1 {
-				logger.sourceRootPrefixIndex = l + len("orbs-network-go/")
+			if l := strings.Index(frame.File, packageName); l > -1 {
+				index = l + len(packageName)
 				break
 			}
 
@@ -58,7 +66,7 @@ func GetLogger(params ...*Field) Logger {
 		}
 	}
 
-	return logger
+	return index
 }
 
 func (b *basicLogger) getCaller(level int) (function string, source string) {
@@ -81,6 +89,7 @@ func (b *basicLogger) getCaller(level int) (function string, source string) {
 	if lastSlashOfName > 0 {
 		fName = fName[lastSlashOfName+1:]
 	}
+
 	return fName, fmt.Sprintf("%s:%d", file[b.sourceRootPrefixIndex:], line)
 }
 
@@ -142,6 +151,11 @@ func (b *basicLogger) WithFilters(filter ...Filter) Logger {
 
 func (b *basicLogger) Filters() []Filter {
 	return b.filters
+}
+
+func (b *basicLogger) WithSourcePrefix(packageName string) Logger {
+	b.sourceRootPrefixIndex = getSourceRootPrefixIndex(packageName)
+	return b
 }
 
 func flattenParams(params []*Field) []*Field {

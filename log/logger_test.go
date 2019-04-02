@@ -125,7 +125,7 @@ func TestStringableSlice(t *testing.T) {
 func TestCustomLogFormatter(t *testing.T) {
 	b := new(bytes.Buffer)
 	serviceLogger := GetLogger(Node("node1"), Service("public-api")).
-		WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter()))
+		WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter())).WithSourcePrefix("scribe/")
 	serviceLogger.Info("Service initialized",
 		Int("some-int-value", 12),
 		Int("block-height", 9999),
@@ -145,8 +145,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
 	require.Regexp(t, "function=log.TestCustomLogFormatter", out)
-	// FIXME source
-	require.Regexp(t, "source=.*log/logger_test.go", out)
+	require.Regexp(t, "source=log/logger_test.go", out)
 	require.Regexp(t, "_test-id=hello", out)
 	require.Regexp(t, "_underscore=wow", out)
 }
@@ -233,6 +232,17 @@ func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 	row := f.FormatRow(time.Now(), "info", "hello")
 
 	require.Regexp(t, "@timestamp", row)
+}
+
+func Test_getCaller(t *testing.T) {
+	l := &basicLogger{
+		sourceRootPrefixIndex: getSourceRootPrefixIndex("scribe/"),
+	}
+
+	function, source := l.getCaller(2)
+
+	require.Equal(t, "log.Test_getCaller", function)
+	require.Regexp(t, "log/logger_test.go:", source) // skipping line number because it will shift when this file is edited
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
