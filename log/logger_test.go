@@ -9,7 +9,6 @@ package log
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
@@ -130,7 +129,7 @@ func TestCustomLogFormatter(t *testing.T) {
 		Int("some-int-value", 12),
 		Int("block-height", 9999),
 		Bytes("bytes", []byte{2, 3, 99}),
-		Stringable("vchainId", primitives.VirtualChainId(123)),
+		Stringable("vchainId", stringable{"123"}),
 		String("_test-id", "hello"),
 		String("_underscore", "wow"))
 
@@ -141,7 +140,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "node=node1", out)
 	require.Regexp(t, "service=public-api", out)
 	require.Regexp(t, "block-height=9999", out)
-	require.Regexp(t, "vchainId=7b", out)
+	require.Regexp(t, "vchainId=123", out)
 	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
 	require.Regexp(t, "function=log.TestCustomLogFormatter", out)
