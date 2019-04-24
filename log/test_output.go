@@ -20,6 +20,7 @@ type TLog interface {
 	Log(args ...interface{})
 	Error(args ...interface{})
 	Name() string
+	Fail()
 }
 
 func NewTestOutput(tb TLog, formatter LogFormatter) *TestOutput {
@@ -85,7 +86,7 @@ func (o *TestOutput) recordError(line string) {
 		o.tb.Error(TEST_FAILED_ERROR)
 
 	} else {
-
+		o.tb.Fail()
 		// must use print because after test is terminated its t.Log does not output anything
 		fmt.Println(POST_TERMINATED_ERROR, o.tb.Name(), ":", line)
 

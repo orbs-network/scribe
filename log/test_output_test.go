@@ -79,6 +79,20 @@ func TestOutputRecoversFromTestRunnerPanicsDuringRecordError(t *testing.T) {
 	})
 }
 
+func TestOutputFailsTestEvenAfterTermination(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+
+	m.When("Error", "foo").Times(0)
+	m.When("Fail").Times(1)
+
+	o.TestTerminated()
+	o.Append("error", "foo")
+
+	_, err := m.Verify()
+	require.NoError(t, err)
+}
+
 type fakeTLog struct {
 	mock.Mock
 }
@@ -93,6 +107,10 @@ func (t *fakeTLog) Fatal(args ...interface{}) {
 
 func (t *fakeTLog) Log(args ...interface{}) {
 	t.Called(args...)
+}
+
+func (t *fakeTLog) Fail() {
+	t.Called()
 }
 
 func (t *fakeTLog) Name() string {
