@@ -25,34 +25,6 @@ type jsonFormatter struct {
 	timestampColumn string
 }
 
-func isAnyInt(v interface{}) bool {
-	if _, ok := v.(int); ok {
-		return true
-	}
-
-	if _, ok := v.(int32); ok {
-		return true
-	}
-
-	if _, ok := v.(int64); ok {
-		return true
-	}
-
-	if _, ok := v.(uint); ok {
-		return true
-	}
-
-	if _, ok := v.(uint32); ok {
-		return true
-	}
-
-	if _, ok := v.(uint64); ok {
-		return true
-	}
-
-	return false
-}
-
 // Defining a log line type so that we can use a much faster JSON marshall-ing package
 type logLine map[string]interface{}
 
