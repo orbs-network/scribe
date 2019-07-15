@@ -10,11 +10,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/francoispqt/gojay"
-	"github.com/go-playground/ansi"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/francoispqt/gojay"
+	"github.com/go-playground/ansi"
 )
 
 type LogFormatter interface {
@@ -31,30 +32,31 @@ type logLine map[string]interface{}
 // Implementing Marshaler
 func (m logLine) MarshalJSONObject(enc *gojay.Encoder) {
 	for k, v := range m {
-		if asString, valueIsString := v.(string); valueIsString {
-			enc.StringKey(k, asString)
-		} else if x, valueIsArrayOfString := v.([]string); valueIsArrayOfString {
-			enc.AddSliceStringKey(k, x)
-		} else if intVal, valueIsInt := v.(int); valueIsInt {
-			enc.IntKey(k, intVal)
-		} else if int32Val, valueIsInt32 := v.(int32); valueIsInt32 {
-			enc.Int32Key(k, int32Val)
-		} else if int64Val, valueIsInt64 := v.(int64); valueIsInt64 {
-			enc.Int64Key(k, int64Val)
-		} else if _, valueIsUInt := v.(uint); valueIsUInt {
+		switch vv := v.(type) {
+		case string:
+			enc.StringKey(k, vv)
+		case []string:
+			enc.AddSliceStringKey(k, vv)
+		case int:
+			enc.IntKey(k, vv)
+		case int32:
+			enc.Int32Key(k, vv)
+		case int64:
+			enc.Int64Key(k, vv)
+		case uint16:
 			uIntVal, _ := v.(uint16)
 			enc.Uint16Key(k, uIntVal)
-		} else if uint32Val, valueIsUInt32 := v.(uint32); valueIsUInt32 {
-			enc.Uint32Key(k, uint32Val)
-		} else if uint64Val, valueIsUInt64 := v.(uint64); valueIsUInt64 {
-			enc.Uint64Key(k, uint64Val)
-		} else if float32Val, valueIsFloat32 := v.(float32); valueIsFloat32 {
-			enc.Float32Key(k, float32Val)
-		} else if float64Val, valueIsFloat64 := v.(float64); valueIsFloat64 {
-			enc.Float64Key(k, float64Val)
-		} else {
+		case uint32:
+			enc.Uint32Key(k, vv)
+		case uint64:
+			enc.Uint64Key(k, vv)
+		case float32:
+			enc.Float32Key(k, vv)
+		case float64:
+			enc.Float64Key(k, vv)
+		default:
 			// We 'force' all other types to convert into string
-			enc.StringKey(k, fmt.Sprintf("%v", v))
+			enc.StringKey(k, fmt.Sprintf("%v", vv))
 		}
 	}
 }
