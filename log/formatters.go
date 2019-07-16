@@ -43,9 +43,9 @@ func (m logLine) MarshalJSONObject(enc *gojay.Encoder) {
 			enc.Int32Key(k, vv)
 		case int64:
 			enc.Int64Key(k, vv)
-		case uint16:
-			uIntVal, _ := v.(uint16)
-			enc.Uint16Key(k, uIntVal)
+		case uint:
+			uint64Value := uint64(vv)
+			enc.Uint64Key(k, uint64Value)
 		case uint32:
 			enc.Uint32Key(k, vv)
 		case uint64:
