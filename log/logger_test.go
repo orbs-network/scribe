@@ -242,7 +242,7 @@ func Test_getCaller(t *testing.T) {
 	function, source := l.getCaller(2)
 
 	require.Equal(t, "log.Test_getCaller", function)
-	require.Regexp(t, "^log/logger_test.go:", source) // skipping line number because it will shift when this file is edited
+	require.Regexp(t, "^.*log/logger_test.go:", source) // skipping line number because it will shift when this file is edited
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
