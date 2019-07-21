@@ -22,3 +22,6 @@
 [submodule "log/vendor/github.com/francoispqt/gojay"]
 	path = log/vendor/github.com/francoispqt/gojay
 	url = https://github.com/francoispqt/gojay
+[submodule "vendor/github.com/orbs-network/gojay"]
+	path = vendor/github.com/orbs-network/gojay
+	url = https://github.com/orbs-network/gojay
