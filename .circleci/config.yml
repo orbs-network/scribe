@@ -3,7 +3,6 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.12
-    #working_directory: /go/src/github.com/orbs-network/scribe/
     steps:
       - checkout
       - run: go test ./... -v

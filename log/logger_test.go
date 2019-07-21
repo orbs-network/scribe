@@ -9,13 +9,14 @@ package log
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -144,7 +145,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
 	require.Regexp(t, "function=log.TestCustomLogFormatter", out)
-	require.Regexp(t, "source=log/logger_test.go", out)
+	require.Regexp(t, "source=.*log/logger_test.go", out)
 	require.Regexp(t, "_test-id=hello", out)
 	require.Regexp(t, "_underscore=wow", out)
 }
