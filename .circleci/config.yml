@@ -6,7 +6,6 @@ jobs:
     working_directory: /go/src/github.com/orbs-network/scribe/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run: go test ./... -v
 
 workflows:
