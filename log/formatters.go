@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/francoispqt/gojay"
+	"github.com/orbs-network/gojay"
 	"github.com/go-playground/ansi"
 )
 
@@ -27,41 +27,50 @@ type jsonFormatter struct {
 }
 
 // Defining a log line type so that we can use a much faster JSON marshall-ing package
-type logLine map[string]interface{}
+type logData struct {
+	level     string
+	timestamp string
+	message   string
+	params    []*Field
+}
 
 // Implementing Marshaler
-func (m logLine) MarshalJSONObject(enc *gojay.Encoder) {
-	for k, v := range m {
-		switch vv := v.(type) {
+func (m logData) MarshalJSONObject(enc *gojay.Encoder) {
+	enc.String(m.level)
+	enc.String(m.timestamp)
+	enc.String(m.message)
+
+	for _, v := range m.params {
+		switch vv := v.Value().(type) {
 		case string:
-			enc.StringKey(k, vv)
+			enc.StringKey(v.Key, vv)
 		case []string:
-			enc.AddSliceStringKey(k, vv)
+			enc.AddSliceStringKey(v.Key, vv)
 		case int:
-			enc.IntKey(k, vv)
+			enc.IntKey(v.Key, vv)
 		case int32:
-			enc.Int32Key(k, vv)
+			enc.Int32Key(v.Key, vv)
 		case int64:
-			enc.Int64Key(k, vv)
-		case uint:
-			uint64Value := uint64(vv)
-			enc.Uint64Key(k, uint64Value)
+			enc.Int64Key(v.Key, vv)
+		case uint16:
+			uIntVal, _ := v.Value().(uint16)
+			enc.Uint16Key(v.Key, uIntVal)
 		case uint32:
-			enc.Uint32Key(k, vv)
+			enc.Uint32Key(v.Key, vv)
 		case uint64:
-			enc.Uint64Key(k, vv)
+			enc.Uint64Key(v.Key, vv)
 		case float32:
-			enc.Float32Key(k, vv)
+			enc.Float32Key(v.Key, vv)
 		case float64:
-			enc.Float64Key(k, vv)
+			enc.Float64Key(v.Key, vv)
 		default:
 			// We 'force' all other types to convert into string
-			enc.StringKey(k, fmt.Sprintf("%v", vv))
+			enc.StringKey(v.Key, fmt.Sprintf("%v", vv))
 		}
 	}
 }
 
-func (m logLine) IsNil() bool {
+func (m logData) IsNil() bool {
 	return m == nil
 }
 
@@ -73,15 +82,12 @@ func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message str
 	enc := gojay.NewEncoder(&sb)
 	defer enc.Release()
 
-	logLine := make(logLine)
+	logLine := logData{}
 
-	logLine["level"] = level
-	logLine[j.timestampColumn] = timestamp.UTC().Format(TIMESTAMP_FORMAT)
-	logLine["message"] = message
-
-	for _, param := range params {
-		logLine[param.Key] = param.Value()
-	}
+	logLine.level = level
+	logLine.timestamp = timestamp.UTC().Format(TIMESTAMP_FORMAT)
+	logLine.message = message
+	logLine.params = params
 
 	if err := enc.Encode(logLine); err != nil {
 		return ""
