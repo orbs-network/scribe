@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orbs-network/gojay"
 	"github.com/go-playground/ansi"
+	"github.com/orbs-network/gojay"
 )
 
 type LogFormatter interface {
@@ -28,17 +28,18 @@ type jsonFormatter struct {
 
 // Defining a log line type so that we can use a much faster JSON marshall-ing package
 type logData struct {
-	level     string
-	timestamp string
-	message   string
-	params    []*Field
+	level        string
+	timestamp    string
+	timestampKey string
+	message      string
+	params       []*Field
 }
 
 // Implementing Marshaler
-func (m logData) MarshalJSONObject(enc *gojay.Encoder) {
-	enc.String(m.level)
-	enc.String(m.timestamp)
-	enc.String(m.message)
+func (m *logData) MarshalJSONObject(enc *gojay.Encoder) {
+	enc.StringKey("level", m.level)
+	enc.StringKey(m.timestampKey, m.timestamp)
+	enc.StringKey("message", m.message)
 
 	for _, v := range m.params {
 		switch vv := v.Value().(type) {
@@ -70,7 +71,7 @@ func (m logData) MarshalJSONObject(enc *gojay.Encoder) {
 	}
 }
 
-func (m logData) IsNil() bool {
+func (m *logData) IsNil() bool {
 	return m == nil
 }
 
@@ -82,14 +83,16 @@ func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message str
 	enc := gojay.NewEncoder(&sb)
 	defer enc.Release()
 
-	logLine := logData{}
+	l := &logData{}
 
-	logLine.level = level
-	logLine.timestamp = timestamp.UTC().Format(TIMESTAMP_FORMAT)
-	logLine.message = message
-	logLine.params = params
+	l.level = level
 
-	if err := enc.Encode(logLine); err != nil {
+	l.timestamp = timestamp.UTC().Format(TIMESTAMP_FORMAT)
+	l.timestampKey = j.timestampColumn
+	l.message = message
+	l.params = params
+
+	if err := enc.Encode(l); err != nil {
 		return ""
 	}
 
