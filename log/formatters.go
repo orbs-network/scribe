@@ -26,19 +26,23 @@ type jsonFormatter struct {
 	timestampColumn string
 }
 
+type logTimeStamp struct {
+	value string
+	key   string
+}
+
 // Defining a log line type so that we can use a much faster JSON marshall-ing package
 type logData struct {
-	level        string
-	timestamp    string
-	timestampKey string
-	message      string
-	params       []*Field
+	level     string
+	timestamp *logTimeStamp
+	message   string
+	params    []*Field
 }
 
 // Implementing Marshaler
 func (m *logData) MarshalJSONObject(enc *gojay.Encoder) {
 	enc.StringKey("level", m.level)
-	enc.StringKey(m.timestampKey, m.timestamp)
+	enc.StringKey(m.timestamp.key, m.timestamp.value)
 	enc.StringKey("message", m.message)
 
 	for _, v := range m.params {
@@ -53,7 +57,7 @@ func (m *logData) MarshalJSONObject(enc *gojay.Encoder) {
 			enc.Int32Key(v.Key, vv)
 		case int64:
 			enc.Int64Key(v.Key, vv)
-		case uint16:
+		case uint:
 			uIntVal, _ := v.Value().(uint16)
 			enc.Uint16Key(v.Key, uIntVal)
 		case uint32:
@@ -83,12 +87,15 @@ func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message str
 	enc := gojay.NewEncoder(&sb)
 	defer enc.Release()
 
+	ts := &logTimeStamp{}
+	ts.value = timestamp.UTC().Format(TIMESTAMP_FORMAT)
+	ts.key = j.timestampColumn
+
 	l := &logData{}
 
 	l.level = level
 
-	l.timestamp = timestamp.UTC().Format(TIMESTAMP_FORMAT)
-	l.timestampKey = j.timestampColumn
+	l.timestamp = ts
 	l.message = message
 	l.params = params
 

@@ -3,10 +3,11 @@ package log
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"log"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/orbs-network/gojay"
 )
@@ -15,7 +16,7 @@ func TestMarhsallingALogLineCorrectly(t *testing.T) {
 	v := logData{}
 
 	v.level = "info"
-	v.timestamp = "1920-30-23"
+	v.timestamp = &logTimeStamp{value: "1920-30-23", key: "timestamp"}
 	v.message = "An idiomatic logline object"
 
 	v.params = append(v.params, Int("intValue", 35))
