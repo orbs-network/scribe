@@ -9,10 +9,13 @@ package log
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/go-playground/ansi"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-playground/ansi"
+	"github.com/orbs-network/gojay"
 )
 
 type LogFormatter interface {
@@ -23,27 +26,84 @@ type jsonFormatter struct {
 	timestampColumn string
 }
 
+type logTimeStamp struct {
+	value string
+	key   string
+}
+
+// Defining a log line type so that we can use a much faster JSON marshall-ing package
+type logData struct {
+	level     string
+	timestamp *logTimeStamp
+	message   string
+	params    []*Field
+}
+
+// Implementing Marshaler
+func (m *logData) MarshalJSONObject(enc *gojay.Encoder) {
+	enc.StringKey("level", m.level)
+	enc.StringKey(m.timestamp.key, m.timestamp.value)
+	enc.StringKey("message", m.message)
+
+	for _, v := range m.params {
+		switch vv := v.Value().(type) {
+		case string:
+			enc.StringKey(v.Key, vv)
+		case []string:
+			enc.AddSliceStringKey(v.Key, vv)
+		case int:
+			enc.IntKey(v.Key, vv)
+		case int32:
+			enc.Int32Key(v.Key, vv)
+		case int64:
+			enc.Int64Key(v.Key, vv)
+		case uint:
+			uIntVal, _ := v.Value().(uint16)
+			enc.Uint16Key(v.Key, uIntVal)
+		case uint32:
+			enc.Uint32Key(v.Key, vv)
+		case uint64:
+			enc.Uint64Key(v.Key, vv)
+		case float32:
+			enc.Float32Key(v.Key, vv)
+		case float64:
+			enc.Float64Key(v.Key, vv)
+		default:
+			// We 'force' all other types to convert into string
+			enc.StringKey(v.Key, fmt.Sprintf("%v", vv))
+		}
+	}
+}
+
+func (m *logData) IsNil() bool {
+	return m == nil
+}
+
 const DEFAULT_TIMESTAMP_COLUMN = "timestamp"
 const TIMESTAMP_FORMAT = "2006-01-02T15:04:05.999999999Z"
 
 func (j *jsonFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
-	logLine := make(map[string]interface{})
+	sb := strings.Builder{}
+	enc := gojay.NewEncoder(&sb)
+	defer enc.Release()
 
-	logLine["level"] = level
-	logLine[j.timestampColumn] = timestamp.UTC().Format(TIMESTAMP_FORMAT)
-	logLine["message"] = message
+	ts := &logTimeStamp{}
+	ts.value = timestamp.UTC().Format(TIMESTAMP_FORMAT)
+	ts.key = j.timestampColumn
 
-	logFields(params, logLine)
+	l := &logData{}
 
-	logLineAsJson, _ := json.Marshal(logLine)
+	l.level = level
 
-	return string(logLineAsJson)
-}
+	l.timestamp = ts
+	l.message = message
+	l.params = params
 
-func logFields(params []*Field, logLine map[string]interface{}) {
-	for _, param := range params {
-		logLine[param.Key] = param.Value()
+	if err := enc.Encode(l); err != nil {
+		return ""
 	}
+
+	return sb.String()
 }
 
 func NewJsonFormatter() *jsonFormatter {

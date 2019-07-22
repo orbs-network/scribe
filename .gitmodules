@@ -19,3 +19,6 @@
 [submodule "vendor/github.com/stretchr/testify"]
 	path = vendor/github.com/stretchr/testify
 	url = https://github.com/stretchr/testify
+[submodule "vendor/github.com/orbs-network/gojay"]
+	path = vendor/github.com/orbs-network/gojay
+	url = https://github.com/orbs-network/gojay
