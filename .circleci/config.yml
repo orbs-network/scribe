@@ -12,7 +12,7 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: go test ./... -count 500 -race
+      - run: go test ./... -count 1000 -race
 
 workflows:
   version: 2
