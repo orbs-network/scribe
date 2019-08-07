@@ -9,6 +9,7 @@ package log
 import (
 	"fmt"
 	"regexp"
+	"sync"
 )
 
 const TEST_FAILED_ERROR = "Test failed due to unexpected errors being logged. If the error above is expected, please add it to the list of allowed errors by invoking TestOutput.AllowErrorsMatching"
@@ -28,6 +29,7 @@ func NewTestOutput(tb TLog, formatter LogFormatter) *TestOutput {
 }
 
 type TestOutput struct {
+	sync.RWMutex
 	formatter            LogFormatter
 	tb                   TLog
 	stopLogging          bool
@@ -38,6 +40,8 @@ type TestOutput struct {
 }
 
 func (o *TestOutput) allowed(message string, fields []*Field) bool {
+	o.RLock()
+	defer o.RUnlock()
 	for _, allowedPattern := range o.allowedErrorPatterns {
 		if allowedPattern.MatchString(message) {
 			return true
@@ -55,12 +59,17 @@ func (o *TestOutput) allowed(message string, fields []*Field) bool {
 }
 
 func (o *TestOutput) AllowErrorsMatching(pattern string) {
+	o.Lock()
+	defer o.Unlock()
 	compiledPattern, _ := regexp.Compile(pattern)
 	o.allowedErrors = append(o.allowedErrors, pattern)
 	o.allowedErrorPatterns = append(o.allowedErrorPatterns, compiledPattern)
 }
 
 func (o *TestOutput) HasErrors() bool {
+	o.RLock()
+	defer o.RUnlock()
+
 	return o.hasErrors
 }
 
@@ -68,6 +77,9 @@ func (o *TestOutput) HasErrors() bool {
 // this happens for example on t.Run where a goroutine logs an Error (which fails the test) after t.Run passed
 // the solution is to add "defer testOutput.TestTerminated()" to execute as the t.Run body is returning
 func (o *TestOutput) TestTerminated() {
+	o.Lock()
+	defer o.Unlock()
+
 	o.testTerminated = true
 }
 
