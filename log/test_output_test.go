@@ -7,6 +7,7 @@
 package log
 
 import (
+	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -91,6 +92,21 @@ func TestOutputFailsTestEvenAfterTermination(t *testing.T) {
 
 	_, err := m.Verify()
 	require.NoError(t, err)
+}
+
+func TestOutput_NoRacesAfterTestTerminated(t *testing.T) {
+	o := NewTestOutput(t, nopFormatter{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	defer o.TestTerminated()
+	go func() {
+		for {
+			o.Append("info", "foo")
+			if ctx.Err() != nil {
+				return
+			}
+		}
+	}()
 }
 
 type fakeTLog struct {
