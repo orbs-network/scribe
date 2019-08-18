@@ -23,14 +23,12 @@ type Logger interface {
 	WithOutput(writer ...Output) Logger
 	WithFilters(filter ...Filter) Logger
 	Filters() []Filter
-	WithSourcePrefix(packageName string) Logger
 }
 
 type basicLogger struct {
 	outputs               []Output
 	tags                  []*Field
 	nestingLevel          int
-	sourceRootPrefixIndex int
 	filters               []Filter
 }
 
@@ -39,34 +37,9 @@ func GetLogger(params ...*Field) Logger {
 		tags:         params,
 		nestingLevel: 4,
 		outputs:      []Output{&basicOutput{writer: os.Stdout, formatter: NewHumanReadableFormatter()}},
-		sourceRootPrefixIndex: getSourceRootPrefixIndex("orbs-network-go/"),
 	}
 
 	return logger
-}
-
-func getSourceRootPrefixIndex(packageName string) int {
-	index := 0
-
-	fpcs := make([]uintptr, 2)
-	n := runtime.Callers(0, fpcs)
-	if n != 0 {
-		frames := runtime.CallersFrames(fpcs[:n])
-
-		for {
-			frame, more := frames.Next()
-			if l := strings.Index(frame.File, packageName); l > -1 {
-				index = l + len(packageName)
-				break
-			}
-
-			if !more {
-				break
-			}
-		}
-	}
-
-	return index
 }
 
 func (b *basicLogger) getCaller(level int) (function string, source string) {
@@ -90,7 +63,7 @@ func (b *basicLogger) getCaller(level int) (function string, source string) {
 		fName = fName[lastSlashOfName+1:]
 	}
 
-	return fName, fmt.Sprintf("%s:%d", file[b.sourceRootPrefixIndex:], line)
+	return fName, fmt.Sprintf("%s:%d", file, line)
 }
 
 func (b *basicLogger) Tags() []*Field {
@@ -102,7 +75,7 @@ func (b *basicLogger) WithTags(params ...*Field) Logger {
 	copy(newTags, b.tags)
 	newTags = append(newTags, params...)
 	//prefixes := append(b.tags, params...)
-	return &basicLogger{tags: newTags, nestingLevel: b.nestingLevel, outputs: b.outputs, sourceRootPrefixIndex: b.sourceRootPrefixIndex, filters: b.filters}
+	return &basicLogger{tags: newTags, nestingLevel: b.nestingLevel, outputs: b.outputs, filters: b.filters}
 }
 
 func (b *basicLogger) Metric(params ...*Field) {
@@ -151,11 +124,6 @@ func (b *basicLogger) WithFilters(filter ...Filter) Logger {
 
 func (b *basicLogger) Filters() []Filter {
 	return b.filters
-}
-
-func (b *basicLogger) WithSourcePrefix(packageName string) Logger {
-	b.sourceRootPrefixIndex = getSourceRootPrefixIndex(packageName)
-	return b
 }
 
 func flattenParams(params []*Field) []*Field {
