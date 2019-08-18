@@ -168,7 +168,7 @@ func printParam(builder *strings.Builder, param *Field) {
 			value = "<nil>"
 		}
 	case StringArrayType:
-		json, err := json.MarshalIndent(param.StringArray, "", "\t")
+		json, err := json.Marshal(param.StringArray)
 		if err != nil {
 			value = ""
 		} else {
