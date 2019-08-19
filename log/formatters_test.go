@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -57,3 +58,12 @@ func TestMarhsallingALogLineCorrectly(t *testing.T) {
 	require.Equal(t, float64(64.32), data["float64Value"])
 	require.Equal(t, []interface{}([]interface{}{"stranger", "strings"}), data["arrayOfStrings"])
 }
+
+func TestFormatHumanReadableRow(t *testing.T) {
+	f := NewHumanReadableFormatter()
+	tm, err := time.Parse(TIMESTAMP_FORMAT, "2006-01-02T01:23:45.123456789Z")
+	require.NoError(t, err)
+	row := f.FormatRow(tm, "info", "foobar")
+	require.Equal(t, "i 01:23:45.123456 foobar ", row)
+}
+
