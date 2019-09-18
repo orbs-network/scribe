@@ -18,14 +18,14 @@ func (o *TestOutput) Append(level string, message string, fields ...*Field) {
 	defer o.RUnlock()
 
 	// we use this mechanism to stop logging new log lines after the test failed from a different goroutine
-	if o.stopLogging {
+	if o.isLoggingDisabled() {
 		return
 	}
 
 	logLine := o.formatter.FormatRow(time.Now(), level, message, fields...)
 
 	if level == "error" && !o.allowed(message, fields) {
-		o.stopLogging = true
+		o.disableLogging()
 		o.recordError(logLine)
 	} else {
 		o.tb.Log(logLine)

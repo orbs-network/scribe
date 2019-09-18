@@ -13,6 +13,24 @@ import (
 	"time"
 )
 
+func TestTestOutput_Append_NoRacesInMultipleConcurrentCalls(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+	m.When("Log", "foobarbaz").Times(10)
+
+	wait := make(chan struct{})
+	for i := 0; i < 10; i++ {
+		go func() {
+			o.Append("error", "foobarbaz")
+			wait <- struct{}{}
+		}()
+	}
+
+	for i := 0; i < 10; i++ {
+		<-wait
+	}
+}
+
 func TestTestOutputLogsToTLog(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
