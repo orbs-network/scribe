@@ -79,26 +79,34 @@ func NewBulkOutput(writer io.Writer, formatter LogFormatter, bulkSize int) Outpu
 }
 
 type httpWriter struct {
-	url string
+	url     string
+	timeout time.Duration
 }
 
 func (w *httpWriter) Write(p []byte) (n int, err error) {
 	reader := bytes.NewReader(p)
 	size := reader.Len()
-	resp, err := http.Post(w.url, "application/json", reader)
+	client := &http.Client{
+		Timeout: w.timeout,
+	}
+	resp, err := client.Post(w.url, "application/json", reader)
 
 	if err != nil {
 		return 0, errors.Errorf("Failed to send logs: %s", err)
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return 0, errors.Errorf("Failed to send logs: %d, %s", resp.StatusCode, err)
 	}
 
 	return size, err
 }
 
-func NewHttpWriter(url string) io.Writer {
-	return &httpWriter{url}
+func NewHttpWriter(url string) *httpWriter {
+	return &httpWriter{url, time.Second * 60}
+}
+
+func NewHttpWriterWithTimeout(url string, timeout time.Duration) *httpWriter {
+	return &httpWriter{url, timeout}
 }
