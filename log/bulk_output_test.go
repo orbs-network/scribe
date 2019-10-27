@@ -123,3 +123,37 @@ func TestBulkOutput_Append(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestHttpWriter_ConsidersResponse201AsSuccess(t *testing.T) {
+	h := newHttpHarness(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		_, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		w.WriteHeader(201)
+	}))
+	h.start(t)
+	defer h.stop(t)
+
+	httpWriter := NewHttpWriter(h.endpointUrl())
+	_, err := httpWriter.Write([]byte("{}"))
+
+	require.NoError(t, err, "HttpWriter considered HTTP 201 as an error response")
+}
+
+func TestHttpWriter_RequestFailsWhenTimeoutReached(t *testing.T) {
+	h := newHttpHarness(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		_, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		time.Sleep(time.Second)
+		w.WriteHeader(200)
+	}))
+	h.start(t)
+	defer h.stop(t)
+
+	httpWriter := NewHttpWriterWithTimeout(h.endpointUrl(), 100*time.Millisecond)
+	_, err := httpWriter.Write([]byte("{}"))
+
+	require.Error(t, err, "HTTP request did not fail")
+	require.Regexp(t, "Timeout", err.Error(), "HTTP request failed with a non timeout related error")
+}

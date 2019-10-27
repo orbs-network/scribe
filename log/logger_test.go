@@ -125,7 +125,7 @@ func TestStringableSlice(t *testing.T) {
 func TestCustomLogFormatter(t *testing.T) {
 	b := new(bytes.Buffer)
 	serviceLogger := GetLogger(Node("node1"), Service("public-api")).
-		WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter())).WithSourcePrefix("scribe/")
+		WithOutput(NewFormattingOutput(b, NewHumanReadableFormatter()))
 	serviceLogger.Info("Service initialized",
 		Int("some-int-value", 12),
 		Int("block-height", 9999),
@@ -136,7 +136,6 @@ func TestCustomLogFormatter(t *testing.T) {
 
 	out := b.String()
 
-	require.Regexp(t, "^info", out)
 	require.Regexp(t, "Service initialized", out)
 	require.Regexp(t, "node=node1", out)
 	require.Regexp(t, "service=public-api", out)
@@ -235,9 +234,7 @@ func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 }
 
 func Test_getCaller(t *testing.T) {
-	l := &basicLogger{
-		sourceRootPrefixIndex: getSourceRootPrefixIndex("scribe/"),
-	}
+	l := &basicLogger{}
 
 	function, source := l.getCaller(2)
 

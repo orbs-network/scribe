@@ -168,7 +168,7 @@ func printParam(builder *strings.Builder, param *Field) {
 			value = "<nil>"
 		}
 	case StringArrayType:
-		json, err := json.MarshalIndent(param.StringArray, "", "\t")
+		json, err := json.Marshal(param.StringArray)
 		if err != nil {
 			value = ""
 		} else {
@@ -229,10 +229,10 @@ func (j *humanReadableFormatter) FormatRow(timestamp time.Time, level string, me
 	var mutableParams = make([]*Field, len(params)) // this is needed because extractParamByTypePrintAndRemove mutates the array
 	copy(mutableParams, params)
 
-	ts := timestamp.UTC().Format("2006-01-02T15:04:05.000000Z07:00")
+	ts := timestamp.UTC().Format("15:04:05.000000")
 
 	builder.WriteString(colorize(mutableParams))
-	builder.WriteString(level)
+	builder.WriteString(level[0:1])
 	builder.WriteString(SPACE)
 	builder.WriteString(ts)
 	builder.WriteString(SPACE)
