@@ -110,8 +110,8 @@ func TestOutputSynchronizesHasErrorsAndAppendError(t *testing.T) {
 		}
 		ch <- 0
 	}()
-	_ = <-ch
-	_ = <-ch
+	<-ch
+	<-ch
 }
 
 type fakeTLog struct {
