@@ -97,18 +97,18 @@ func TestOutputFailsTestEvenAfterTermination(t *testing.T) {
 func TestOutputSynchronizesHasErrorsAndAppendError(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
-	ch := make(chan int)
+	ch := make(chan struct{})
 	go func() {
 		for i := 1; i <= 100; i++ {
 			o.Append("error", "foo")
 		}
-		ch <- 0
+		ch <- struct{}{}
 	}()
 	go func() {
 		for i := 1; i <= 100; i++ {
 			o.HasErrors()
 		}
-		ch <- 0
+		ch <- struct{}{}
 	}()
 	<-ch
 	<-ch
