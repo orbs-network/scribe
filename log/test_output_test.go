@@ -93,6 +93,27 @@ func TestOutputFailsTestEvenAfterTermination(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// designed for race detector
+func TestOutputSynchronizesHasErrorsAndAppendError(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+	ch := make(chan int)
+	go func() {
+		for i := 1; i <= 100; i++ {
+			o.Append("error", "foo")
+		}
+		ch <- 0
+	}()
+	go func() {
+		for i := 1; i <= 100; i++ {
+			o.HasErrors()
+		}
+		ch <- 0
+	}()
+	_ = <-ch
+	_ = <-ch
+}
+
 type fakeTLog struct {
 	mock.Mock
 }
