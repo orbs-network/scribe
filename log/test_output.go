@@ -39,9 +39,8 @@ type TestOutput struct {
 	testTerminated       bool
 }
 
+// assumes read lock (o.RLock())
 func (o *TestOutput) allowed(message string, fields []*Field) bool {
-	o.RLock()
-	defer o.RUnlock()
 	for _, allowedPattern := range o.allowedErrorPatterns {
 		if allowedPattern.MatchString(message) {
 			return true
@@ -83,6 +82,7 @@ func (o *TestOutput) TestTerminated() {
 	o.testTerminated = true
 }
 
+// assumes write lock (o.Lock())
 func (o *TestOutput) recordError(line string) {
 	defer func() {
 		if p := recover(); p != nil {

@@ -14,8 +14,9 @@ import (
 // a file with short name (t.go) to make the testLogger prefix less annoying
 
 func (o *TestOutput) Append(level string, message string, fields ...*Field) {
-	o.RLock()
-	defer o.RUnlock()
+	// take write lock because calling o.recordError()
+	o.Lock()
+	defer o.Unlock()
 
 	// we use this mechanism to stop logging new log lines after the test failed from a different goroutine
 	if o.stopLogging {
