@@ -18,65 +18,70 @@ const string1 = "foo"
 const string2 = "bar"
 const string3 = "buz"
 
+func closeSilently(f *os.File) {
+	_ = f.Close()
+}
+
 func testFileContents(t *testing.T, filename string, expected string) {
 	f, _ := os.Open(filename)
-	defer f.Close()
+	defer closeSilently(f)
 
 	contents, _ := ioutil.ReadAll(f)
 	require.EqualValues(t, []byte(expected), contents)
 }
 
+
 func TestNewTruncatingFileWriterWithNoDefault(t *testing.T) {
 	tmp, err := ioutil.TempFile("/tmp", "truncatingFileWriter")
 	require.NoError(t, err)
-	defer tmp.Close()
+	defer closeSilently(tmp)
 
 	w := NewTruncatingFileWriter(tmp)
-	w.Write([]byte(string1))
+	_, _ = w.Write([]byte(string1))
 	testFileContents(t, tmp.Name(), string1)
 
-	w.Truncate()
+	_ = w.Truncate()
 
-	w.Write([]byte(string2))
+	_, _ = w.Write([]byte(string2))
 	testFileContents(t, tmp.Name(), string2)
 }
 
 func TestNewTruncatingFileWriterWithAutoTruncate(t *testing.T) {
 	tmp, err := ioutil.TempFile("/tmp", "truncatingFileWriter")
 	require.NoError(t, err)
-	defer tmp.Close()
+	defer closeSilently(tmp)
 
 	w := NewTruncatingFileWriter(tmp, 1*time.Millisecond)
-	w.Write([]byte(string1))
+	_, _ = w.Write([]byte(string1))
 	testFileContents(t, tmp.Name(), string1)
 
 	time.Sleep(1 * time.Millisecond)
 
-	w.Write([]byte(string2))
+	_, _ = w.Write([]byte(string2))
 	testFileContents(t, tmp.Name(), string2)
 
 	time.Sleep(1 * time.Millisecond)
 
-	w.Write([]byte(string3))
+	_, _ = w.Write([]byte(string3))
 	testFileContents(t, tmp.Name(), string3)
 }
 
 func TestNewTruncatingFileWriterDoesNotTruncateBeforeTimeoutElapsed(t *testing.T) {
 	tmp, err := ioutil.TempFile("/tmp", "truncatingFileWriter")
 	require.NoError(t, err)
-	defer tmp.Close()
+	defer closeSilently(tmp)
 
 	w := NewTruncatingFileWriter(tmp, 1*time.Second)
-	w.Write([]byte(string1))
+	_, _ = w.Write([]byte(string1))
 	testFileContents(t, tmp.Name(), string1)
 
 	time.Sleep(1 * time.Millisecond)
 
-	w.Write([]byte(string2))
+	_, _ = w.Write([]byte(string2))
 	testFileContents(t, tmp.Name(), string1 + string2)
 
 	time.Sleep(1 * time.Millisecond)
 
-	w.Write([]byte(string3))
+	_, _ = w.Write([]byte(string3))
 	testFileContents(t, tmp.Name(), string1 + string2 + string3)
 }
