@@ -7,7 +7,6 @@
 package log
 
 import (
-	"io"
 	"os"
 	"time"
 )
@@ -18,12 +17,7 @@ type truncatingFileWriter struct {
 	lastTruncated time.Time
 }
 
-type TruncatingFileWriter interface {
-	io.Writer
-	Truncate() error
-}
-
-func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) TruncatingFileWriter {
+func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) *truncatingFileWriter {
 	interval := time.Duration(0)
 
 	if len(intervals) > 0 {
@@ -38,7 +32,7 @@ func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) TruncatingF
 }
 
 func (w *truncatingFileWriter) Write(p []byte) (n int, err error) {
-	if w.interval.Nanoseconds() > 0 && (time.Now().UnixNano()-w.lastTruncated.UnixNano() >= w.interval.Nanoseconds()) {
+	if w.interval.Nanoseconds() > 0 && (time.Since(w.lastTruncated) >= w.interval) {
 		if err := w.Truncate(); err != nil {
 			w.lastTruncated = time.Now()
 		}
