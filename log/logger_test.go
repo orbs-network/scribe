@@ -226,6 +226,18 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 	})
 }
 
+func TestLogger_APanickingOutputDoesNotPreventOtherOutputsBeingWritten(t *testing.T) {
+	b := new(bytes.Buffer)
+	o1 := &panickingOutput{}
+	o2 := NewFormattingOutput(b, NewHumanReadableFormatter())
+
+	require.NotPanics(t, func() {
+		GetLogger().WithOutput(o1, o2).Log("info", "foobar") // use .Log rather than a specific level func to demonstrate this is level-independent
+	})
+
+	require.Regexp(t, "foobar", b.String())
+}
+
 func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 	f := NewJsonFormatter().WithTimestampColumn("@timestamp")
 	row := f.FormatRow(time.Now(), "info", "hello")
@@ -286,4 +298,11 @@ type stringable struct {
 
 func (s stringable) String() string {
 	return s.value
+}
+
+type panickingOutput struct {
+}
+
+func (p *panickingOutput) Append(level string, message string, fields ...*Field) {
+	panic("kaboom")
 }

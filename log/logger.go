@@ -26,10 +26,10 @@ type Logger interface {
 }
 
 type basicLogger struct {
-	outputs               []Output
-	tags                  []*Field
-	nestingLevel          int
-	filters               []Filter
+	outputs      []Output
+	tags         []*Field
+	nestingLevel int
+	filters      []Filter
 }
 
 func GetLogger(params ...*Field) Logger {
@@ -100,7 +100,7 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	}
 
 	for _, output := range b.outputs {
-		output.Append(level, message, enrichmentParams...)
+		b.appendTo(output, level, message, enrichmentParams)
 	}
 }
 
@@ -138,4 +138,11 @@ func flattenParams(params []*Field) []*Field {
 		}
 	}
 	return flattened
+}
+
+func (b *basicLogger) appendTo(output Output, level string, message string, enrichmentParams []*Field) {
+	defer func() {
+		recover() // do nothing with error on purpose - if an Output has panicked, there's nothing we can do about it
+	}()
+	output.Append(level, message, enrichmentParams...)
 }
