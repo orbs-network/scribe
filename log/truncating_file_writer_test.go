@@ -31,7 +31,7 @@ func testFileContents(t *testing.T, filename string, expected string) {
 }
 
 
-func TestNewTruncatingFileWriterWithNoDefault(t *testing.T) {
+func TestNewTruncatingFileWriterWithManualTruncate(t *testing.T) {
 	tmp, err := ioutil.TempFile("/tmp", "truncatingFileWriter")
 	require.NoError(t, err)
 	defer closeSilently(tmp)
@@ -51,19 +51,17 @@ func TestNewTruncatingFileWriterWithAutoTruncate(t *testing.T) {
 	require.NoError(t, err)
 	defer closeSilently(tmp)
 
-	w := NewTruncatingFileWriter(tmp, 1*time.Millisecond)
+	truncateDuration := 100 * time.Millisecond
+	w := NewTruncatingFileWriter(tmp, truncateDuration)
 	_, _ = w.Write([]byte(string1))
-	testFileContents(t, tmp.Name(), string1)
+	_, _ = w.Write([]byte(string1))
+	testFileContents(t, tmp.Name(), string1 + string1)
 
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(truncateDuration)
 
 	_, _ = w.Write([]byte(string2))
-	testFileContents(t, tmp.Name(), string2)
-
-	time.Sleep(1 * time.Millisecond)
-
-	_, _ = w.Write([]byte(string3))
-	testFileContents(t, tmp.Name(), string3)
+	_, _ = w.Write([]byte(string2))
+	testFileContents(t, tmp.Name(), string2 + string2)
 }
 
 func TestNewTruncatingFileWriterDoesNotTruncateBeforeTimeoutElapsed(t *testing.T) {
