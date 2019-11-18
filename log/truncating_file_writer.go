@@ -7,7 +7,6 @@
 package log
 
 import (
-	"io"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -22,12 +21,7 @@ type truncatingFileWriter struct {
 	lastTruncatedUnixNano int64
 }
 
-type TruncatingFileWriter interface {
-	io.Writer
-	Truncate() error
-}
-
-func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) TruncatingFileWriter {
+func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) *truncatingFileWriter {
 	interval := time.Duration(0)
 
 	if len(intervals) > 0 {
