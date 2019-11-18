@@ -7,5 +7,5 @@
 package log
 
 type Output interface {
-	Append(level string, message string, fields ...*Field)
+	Append(onError func(err error), level string, message string, fields ...*Field)
 }
