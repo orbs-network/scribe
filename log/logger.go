@@ -7,6 +7,7 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -35,7 +36,7 @@ type basicLogger struct {
 func GetLogger(params ...*Field) Logger {
 	logger := &basicLogger{
 		tags:         params,
-		nestingLevel: 4,
+		nestingLevel: 5,
 		outputs:      []Output{&basicOutput{writer: os.Stdout, formatter: NewHumanReadableFormatter()}},
 	}
 
@@ -82,7 +83,7 @@ func (b *basicLogger) Metric(params ...*Field) {
 	b.Log("metric", "Metric recorded", params...)
 }
 
-func (b *basicLogger) Log(level string, message string, params ...*Field) {
+func (b *basicLogger) log(logLoggingErrors bool, level string, message string, params ...*Field) {
 	function, source := b.getCaller(b.nestingLevel)
 
 	enrichmentParams := flattenParams(
@@ -100,8 +101,12 @@ func (b *basicLogger) Log(level string, message string, params ...*Field) {
 	}
 
 	for _, output := range b.outputs {
-		b.appendTo(output, level, message, enrichmentParams)
+		b.appendTo(output, level, message, enrichmentParams, logLoggingErrors)
 	}
+}
+
+func (b *basicLogger) Log(level string, message string, params ...*Field) {
+	b.log(true, level, message, params...)
 }
 
 func (b *basicLogger) Info(message string, params ...*Field) {
@@ -140,9 +145,31 @@ func flattenParams(params []*Field) []*Field {
 	return flattened
 }
 
-func (b *basicLogger) appendTo(output Output, level string, message string, enrichmentParams []*Field) {
+func (b *basicLogger) logLoggingError(err error) {
+	b.log(false, "error", fmt.Sprintf("failed to append log to output: %s", err.Error()))
+}
+
+func (b *basicLogger) appendTo(output Output, level string, message string, enrichmentParams []*Field, logLoggingErrors bool) {
+	onError := func(err error) {
+		if logLoggingErrors {
+			b.logLoggingError(err)
+		}
+	}
+
 	defer func() {
-		recover() // do nothing with error on purpose - if an Output has panicked, there's nothing we can do about it
+		recoveredError := recover()
+		if recoveredError != nil {
+			var err error
+			switch errObj := recoveredError.(type) {
+			case error:
+				err = errObj
+			case string:
+				err = errors.New(errObj)
+			default:
+				err = errors.New("unknown error object type")
+			}
+			onError(err)
+		}
 	}()
-	output.Append(level, message, enrichmentParams...)
+	output.Append(onError, level, message, enrichmentParams...)
 }
