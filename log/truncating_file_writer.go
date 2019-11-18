@@ -44,7 +44,7 @@ func (w *truncatingFileWriter) Write(p []byte) (n int, err error) {
 	now := time.Now()
 	lastTruncated := w.getLastTruncatedUnixNano()
 	if w.interval.Nanoseconds() > 0 && (shouldTruncate(now, lastTruncated, w.interval)) {
-		w.autoTruncate(now)
+		_ = w.autoTruncate(now) // TODO log the failure to truncate?
 	}
 
 	return w.f.Write(p)
