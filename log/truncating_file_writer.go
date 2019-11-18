@@ -38,9 +38,11 @@ func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) TruncatingF
 }
 
 func (w *truncatingFileWriter) Write(p []byte) (n int, err error) {
-	if w.interval.Nanoseconds() > 0 && (time.Now().UnixNano()-w.lastTruncated.UnixNano() >= w.interval.Nanoseconds()) {
-		if err := w.Truncate(); err == nil {
-			w.lastTruncated = time.Now()
+	now := time.Now()
+	if w.interval.Nanoseconds() > 0 && (now.UnixNano()-w.lastTruncated.UnixNano() >= w.interval.Nanoseconds()) {
+		err := w.Truncate()
+		if err == nil {
+			w.lastTruncated = now
 		}
 	}
 
