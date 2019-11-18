@@ -9,12 +9,15 @@ package log
 import (
 	"io"
 	"os"
+	"sync"
 	"time"
 )
 
 type truncatingFileWriter struct {
-	f             *os.File
-	interval      time.Duration
+	f        *os.File
+	interval time.Duration
+
+	mu            sync.RWMutex
 	lastTruncated time.Time
 }
 
@@ -39,14 +42,33 @@ func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) TruncatingF
 
 func (w *truncatingFileWriter) Write(p []byte) (n int, err error) {
 	now := time.Now()
-	if w.interval.Nanoseconds() > 0 && (now.UnixNano()-w.lastTruncated.UnixNano() >= w.interval.Nanoseconds()) {
-		err := w.Truncate()
-		if err == nil {
-			w.lastTruncated = now
-		}
+	lastTruncated := w.getLastTruncatedUnixNano()
+	if w.interval.Nanoseconds() > 0 && (shouldTruncate(now, lastTruncated, w.interval)) {
+		w.autoTruncate(now)
 	}
 
 	return w.f.Write(p)
+}
+
+func (w *truncatingFileWriter) getLastTruncatedUnixNano() time.Time {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.lastTruncated
+}
+
+func (w *truncatingFileWriter) autoTruncate(now time.Time) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if shouldTruncate(now, w.lastTruncated, w.interval) { // check again under lock
+		err := w.Truncate()
+		if err != nil {
+			return err
+		}
+		w.lastTruncated = now
+	}
+
+	return nil
 }
 
 func (w *truncatingFileWriter) Truncate() error {
@@ -57,4 +79,8 @@ func (w *truncatingFileWriter) Truncate() error {
 	}
 
 	return nil
+}
+
+func shouldTruncate(now time.Time, lastTruncated time.Time, interval time.Duration) bool {
+	return interval.Nanoseconds() > 0 && now.UnixNano()-lastTruncated.UnixNano() >= interval.Nanoseconds()
 }
