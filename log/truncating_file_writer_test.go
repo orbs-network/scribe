@@ -85,3 +85,43 @@ func TestNewTruncatingFileWriterDoesNotTruncateBeforeTimeoutElapsed(t *testing.T
 	_, _ = w.Write([]byte(string3))
 	testFileContents(t, tmp.Name(), string1 + string2 + string3)
 }
+
+func TestNewTruncatingFileWriterDoesNotTruncateWithZeroTimeout(t *testing.T) {
+	tmp, err := ioutil.TempFile("/tmp", "truncatingFileWriter")
+	require.NoError(t, err)
+	defer closeSilently(tmp)
+
+	w := NewTruncatingFileWriter(tmp, 0)
+	_, _ = w.Write([]byte(string1))
+	testFileContents(t, tmp.Name(), string1)
+
+	time.Sleep(1 * time.Millisecond)
+
+	_, _ = w.Write([]byte(string2))
+	testFileContents(t, tmp.Name(), string1 + string2)
+
+	time.Sleep(1 * time.Millisecond)
+
+	_, _ = w.Write([]byte(string3))
+	testFileContents(t, tmp.Name(), string1 + string2 + string3)
+}
+
+func TestNewTruncatingFileWriterDoesNotTruncateWithoutTimeouts(t *testing.T) {
+	tmp, err := ioutil.TempFile("/tmp", "truncatingFileWriter")
+	require.NoError(t, err)
+	defer closeSilently(tmp)
+
+	w := NewTruncatingFileWriter(tmp)
+	_, _ = w.Write([]byte(string1))
+	testFileContents(t, tmp.Name(), string1)
+
+	time.Sleep(1 * time.Millisecond)
+
+	_, _ = w.Write([]byte(string2))
+	testFileContents(t, tmp.Name(), string1 + string2)
+
+	time.Sleep(1 * time.Millisecond)
+
+	_, _ = w.Write([]byte(string3))
+	testFileContents(t, tmp.Name(), string1 + string2 + string3)
+}
