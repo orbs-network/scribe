@@ -33,17 +33,17 @@ type bulkOutput struct {
 	logs []*row
 }
 
-func (out *bulkOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
+func (out *bulkOutput) Append(level string, message string, fields ...*Field) {
 	row := &row{level, time.Now(), message, fields}
 
 	out.lock.Lock()
 	out.logs = append(out.logs, row)
 	out.lock.Unlock()
 
-	out.flushIfNeeded(onError)
+	out.flushIfNeeded()
 }
 
-func (out *bulkOutput) flushIfNeeded(onError func(err error)) {
+func (out *bulkOutput) flushIfNeeded() {
 	out.lock.Lock()
 	defer out.lock.Unlock()
 
@@ -59,7 +59,6 @@ func (out *bulkOutput) flushIfNeeded(onError func(err error)) {
 
 		go func() {
 			if n, err := out.writer.Write(b.Bytes()); err != nil {
-				onError(err)
 				fmt.Println(fmt.Sprintf("%s failed to send logs via http, %d bytes lost: %s", time.Now().String(), n, err))
 			}
 		}()

@@ -13,7 +13,7 @@ import (
 // this file is part of test_output.go
 // a file with short name (t.go) to make the testLogger prefix less annoying
 
-func (o *TestOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
+func (o *TestOutput) Append(level string, message string, fields ...*Field) {
 	// take write lock because calling o.recordError()
 	o.Lock()
 	defer o.Unlock()
@@ -31,5 +31,4 @@ func (o *TestOutput) Append(onError func(err error), level string, message strin
 	} else {
 		o.tb.Log(logLine)
 	}
-
 }

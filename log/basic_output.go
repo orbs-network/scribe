@@ -17,12 +17,9 @@ type basicOutput struct {
 	writer    io.Writer
 }
 
-func (out *basicOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
+func (out *basicOutput) Append(level string, message string, fields ...*Field) {
 	logLine := out.formatter.FormatRow(time.Now(), level, message, fields...)
-	_, err := fmt.Fprintln(out.writer, logLine)
-	if err != nil {
-		onError(err)
-	}
+	fmt.Fprintln(out.writer, logLine)
 }
 
 func NewFormattingOutput(writer io.Writer, formatter LogFormatter) Output {
