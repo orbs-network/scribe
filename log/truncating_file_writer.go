@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -17,8 +18,8 @@ type truncatingFileWriter struct {
 	f        *os.File
 	interval time.Duration
 
-	mu            sync.RWMutex
-	lastTruncated time.Time
+	mu                    sync.Mutex
+	lastTruncatedUnixNano int64
 }
 
 type TruncatingFileWriter interface {
@@ -34,41 +35,32 @@ func NewTruncatingFileWriter(f *os.File, intervals ...time.Duration) TruncatingF
 	}
 
 	return &truncatingFileWriter{
-		f:             f,
-		interval:      interval,
-		lastTruncated: time.Now(),
+		f:                     f,
+		interval:              interval,
+		lastTruncatedUnixNano: time.Now().UnixNano(),
 	}
 }
 
 func (w *truncatingFileWriter) Write(p []byte) (n int, err error) {
 	now := time.Now()
-	lastTruncated := w.getLastTruncatedUnixNano()
-	if w.interval.Nanoseconds() > 0 && (shouldTruncate(now, lastTruncated, w.interval)) {
-		_ = w.autoTruncate(now) // TODO log the failure to truncate?
+	lastTruncated := atomic.LoadInt64(&w.lastTruncatedUnixNano)
+	if shouldTruncate(now, lastTruncated, w.interval) {
+		func () { // only for defer scope
+			w.mu.Lock()
+			defer w.mu.Unlock()
+
+			lastTruncated = atomic.LoadInt64(&w.lastTruncatedUnixNano)
+			if shouldTruncate(now, lastTruncated, w.interval) { // check again under lock
+				err := w.Truncate()
+				if err != nil {
+					return // TODO log the failure to truncate?
+				}
+				atomic.StoreInt64(&w.lastTruncatedUnixNano, now.UnixNano())
+			}
+		}()
 	}
 
 	return w.f.Write(p)
-}
-
-func (w *truncatingFileWriter) getLastTruncatedUnixNano() time.Time {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-	return w.lastTruncated
-}
-
-func (w *truncatingFileWriter) autoTruncate(now time.Time) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if shouldTruncate(now, w.lastTruncated, w.interval) { // check again under lock
-		err := w.Truncate()
-		if err != nil {
-			return err
-		}
-		w.lastTruncated = now
-	}
-
-	return nil
 }
 
 func (w *truncatingFileWriter) Truncate() error {
@@ -81,6 +73,6 @@ func (w *truncatingFileWriter) Truncate() error {
 	return nil
 }
 
-func shouldTruncate(now time.Time, lastTruncated time.Time, interval time.Duration) bool {
-	return interval.Nanoseconds() > 0 && now.UnixNano()-lastTruncated.UnixNano() >= interval.Nanoseconds()
+func shouldTruncate(now time.Time, lastTruncatedUnixNano int64, interval time.Duration) bool {
+	return interval.Nanoseconds() > 0 && now.UnixNano() - lastTruncatedUnixNano >= interval.Nanoseconds()
 }
