@@ -9,6 +9,7 @@ package log
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -226,6 +227,40 @@ func TestMultipleOutputsForMemoryViolationByHumanReadable(t *testing.T) {
 	})
 }
 
+func TestLogger_APanickingOutputWritesThePanicErrorToOtherOutputs(t *testing.T) {
+	b := new(bytes.Buffer)
+	o1 := &panickingOutput{
+		errObj: "kaboom - string",
+	}
+	o2 := &panickingOutput{
+		errObj: fmt.Errorf("kaboom - error"),
+	}
+	o3 := NewFormattingOutput(b, NewHumanReadableFormatter())
+
+	require.NotPanics(t, func() {
+		GetLogger().WithOutput(o1, o2, o3).Log("info", "foobar") // use .Log rather than a specific level func to demonstrate this is level-independent
+	})
+
+	require.Regexp(t, "foobar", b.String())
+	require.Regexp(t, "kaboom - string", b.String())
+	require.Regexp(t, "kaboom - error", b.String())
+}
+
+func TestLogger_AnErroneousOutputWritesTheErrorToOtherOutputs(t *testing.T) {
+	b := new(bytes.Buffer)
+	o1 := &erroneousOutput{
+		err: fmt.Errorf("kaboom - string"),
+	}
+	o2 := NewFormattingOutput(b, NewHumanReadableFormatter())
+
+	require.NotPanics(t, func() {
+		GetLogger().WithOutput(o1, o2).Log("info", "foobar") // use .Log rather than a specific level func to demonstrate this is level-independent
+	})
+
+	require.Regexp(t, "foobar", b.String())
+	require.Regexp(t, "kaboom - string", b.String())
+}
+
 func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 	f := NewJsonFormatter().WithTimestampColumn("@timestamp")
 	row := f.FormatRow(time.Now(), "info", "hello")
@@ -286,4 +321,20 @@ type stringable struct {
 
 func (s stringable) String() string {
 	return s.value
+}
+
+type panickingOutput struct {
+	errObj interface{}
+}
+
+func (p *panickingOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
+	panic(p.errObj)
+}
+
+type erroneousOutput struct {
+	err error
+}
+
+func (p *erroneousOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
+	onError(p.err)
 }

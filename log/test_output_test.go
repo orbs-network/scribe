@@ -13,12 +13,32 @@ import (
 	"time"
 )
 
+func onErrorStub(err error) {}
+
+func TestTestOutput_Append_NoRacesInMultipleConcurrentCalls(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+	m.When("Log", "foobarbaz").Times(10)
+
+	wait := make(chan struct{})
+	for i := 0; i < 10; i++ {
+		go func() {
+			o.Append(onErrorStub, "error", "foobarbaz")
+			wait <- struct{}{}
+		}()
+	}
+
+	for i := 0; i < 10; i++ {
+		<-wait
+	}
+}
+
 func TestTestOutputLogsToTLog(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
 	m.When("Log", "foo").Times(1)
 
-	o.Append("info", "foo")
+	o.Append(onErrorStub, "info", "foo")
 
 	_, err := m.Verify()
 	require.NoError(t, err)
@@ -31,8 +51,8 @@ func TestOutputLogsUnAllowedErrorToTLogAsErrorAndStopsLogging(t *testing.T) {
 	m.When("Error", TEST_FAILED_ERROR).Times(1)
 	m.Never("Log", "bar")
 
-	o.Append("error", "foo")
-	o.Append("info", "bar")
+	o.Append(onErrorStub, "error", "foo")
+	o.Append(onErrorStub, "info", "bar")
 
 	_, err := m.Verify()
 	require.NoError(t, err)
@@ -46,7 +66,7 @@ func TestOutputLogsAllowedErrorToTLogAsInfo(t *testing.T) {
 	o.AllowErrorsMatching("foo")
 	m.When("Log", "foo").Times(1)
 
-	o.Append("error", "foo")
+	o.Append(onErrorStub, "error", "foo")
 
 	_, err := m.Verify()
 	require.NoError(t, err)
@@ -60,7 +80,7 @@ func TestOutputStopsRecordingErrorsAfterTestTerminated(t *testing.T) {
 	m.When("Error", "foo").Times(0)
 
 	o.TestTerminated()
-	o.Append("error", "foo")
+	o.Append(onErrorStub, "error", "foo")
 
 	_, err := m.Verify()
 	require.NoError(t, err)
@@ -75,7 +95,7 @@ func TestOutputRecoversFromTestRunnerPanicsDuringRecordError(t *testing.T) {
 	})
 
 	require.NotPanics(t, func() {
-		o.Append("error", "foo")
+		o.Append(onErrorStub, "error", "foo")
 	})
 }
 
@@ -87,7 +107,7 @@ func TestOutputFailsTestEvenAfterTermination(t *testing.T) {
 	m.When("Fail").Times(1)
 
 	o.TestTerminated()
-	o.Append("error", "foo")
+	o.Append(onErrorStub, "error", "foo")
 
 	_, err := m.Verify()
 	require.NoError(t, err)
@@ -100,7 +120,7 @@ func TestOutputSynchronizesHasErrorsAndAppendError(t *testing.T) {
 	ch := make(chan struct{})
 	go func() {
 		for i := 1; i <= 100; i++ {
-			o.Append("error", "foo")
+			o.Append(onErrorStub, "error", "foo")
 		}
 		ch <- struct{}{}
 	}()

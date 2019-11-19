@@ -7,6 +7,13 @@ jobs:
       - checkout
       - run: go test ./... -v
 
+  races:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: go test ./... -v -race
+
   build-vendoring:
     docker:
       - image: circleci/golang:1.12
@@ -22,3 +29,4 @@ workflows:
     jobs:
       - build-go-modules
       - build-vendoring
+      - races
