@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"regexp"
 	"sync"
+	"sync/atomic"
 )
 
 const TEST_FAILED_ERROR = "Test failed due to unexpected errors being logged. If the error above is expected, please add it to the list of allowed errors by invoking TestOutput.AllowErrorsMatching"
@@ -32,16 +33,15 @@ type TestOutput struct {
 	sync.RWMutex
 	formatter            LogFormatter
 	tb                   TLog
-	stopLogging          bool
+	loggingDisabled      uint32 // so that we can atomic.Store and atomic.Load it
 	allowedErrors        []string
 	allowedErrorPatterns []*regexp.Regexp
 	hasErrors            bool
 	testTerminated       bool
 }
 
+// assumes read lock (o.RLock())
 func (o *TestOutput) allowed(message string, fields []*Field) bool {
-	o.RLock()
-	defer o.RUnlock()
 	for _, allowedPattern := range o.allowedErrorPatterns {
 		if allowedPattern.MatchString(message) {
 			return true
@@ -83,6 +83,7 @@ func (o *TestOutput) TestTerminated() {
 	o.testTerminated = true
 }
 
+// assumes write lock (o.Lock())
 func (o *TestOutput) recordError(line string) {
 	defer func() {
 		if p := recover(); p != nil {
@@ -103,6 +104,14 @@ func (o *TestOutput) recordError(line string) {
 		fmt.Println(POST_TERMINATED_ERROR, o.tb.Name(), ":", line)
 
 	}
+}
+
+func (o *TestOutput) isLoggingDisabled() bool {
+	return atomic.LoadUint32(&o.loggingDisabled) != 0
+}
+
+func (o *TestOutput) disableLogging() {
+	atomic.StoreUint32(&o.loggingDisabled, 1)
 }
 
 // func (o *TestOutput) Append(level string, message string, fields ...*Field) moved to file t.go
