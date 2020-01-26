@@ -72,7 +72,7 @@ func (b *basicLogger) Tags() []*Field {
 }
 
 func (b *basicLogger) WithTags(params ...*Field) Logger {
-	newTags := make([]*Field, len(b.tags))
+	newTags := make([]*Field, len(b.tags), len(b.tags)+len(params))
 	copy(newTags, b.tags)
 	newTags = append(newTags, params...)
 	//prefixes := append(b.tags, params...)
@@ -117,14 +117,16 @@ func (b *basicLogger) Error(message string, params ...*Field) {
 	b.Log("error", message, params...)
 }
 
-func (b *basicLogger) WithOutput(writers ...Output) Logger {
-	b.outputs = writers
-	return b
+func (b *basicLogger) WithOutput(outputs ...Output) Logger {
+	return &basicLogger{tags: b.tags, nestingLevel: b.nestingLevel, outputs: outputs, filters: b.filters}
 }
 
-func (b *basicLogger) WithFilters(filter ...Filter) Logger {
-	b.filters = append(b.filters, filter...) // this is not thread safe, I know
-	return b
+func (b *basicLogger) WithFilters(filters ...Filter) Logger {
+	newFilters := make([]Filter, len(b.filters), len(b.filters)+len(filters))
+	copy(newFilters, b.filters)
+	newFilters = append(newFilters, filters...)
+	//prefixes := append(b.tags, params...)
+	return &basicLogger{tags: b.tags, nestingLevel: b.nestingLevel, outputs: b.outputs, filters: newFilters}
 }
 
 func (b *basicLogger) Filters() []Filter {
