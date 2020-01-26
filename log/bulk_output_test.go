@@ -35,6 +35,15 @@ func newHttpHarness(handler http.Handler) *httpOutputHarness {
 	}
 }
 
+type testWriter struct {
+	done chan struct{}
+}
+
+func (w *testWriter) Write(p []byte) (n int, err error) {
+	close(w.done)
+	return len(p), nil
+}
+
 func (h *httpOutputHarness) start(t *testing.T) {
 	ch := make(chan struct{})
 	go func() {
@@ -95,6 +104,57 @@ func TestHttpWriter_Write(t *testing.T) {
 }
 
 func TestBulkOutput_Append(t *testing.T) {
+	batch := make(chan struct{}, 1)
+	timeout := make(chan struct{})
+	go func() {
+		time.Sleep(1 * time.Second)
+		close(timeout)
+	}()
+
+	output := NewBulkOutput(
+		&testWriter{batch},
+		nopFormatter{},
+		3)
+	logger := GetLogger().WithOutput(output)
+
+	logger.Info("Ground control to Major Tom")
+	logger.Info("Commencing countdown")
+	logger.Info("Engines on")
+	select {
+	case <-timeout:
+		require.Fail(t, "Timed out waiting for batch")
+	case <-batch:
+	}
+}
+
+func TestBulkOutput_SetFilters(t *testing.T) {
+	batch := make(chan struct{}, 1)
+	timeout := make(chan struct{})
+	go func() {
+		time.Sleep(1 * time.Second)
+		close(timeout)
+	}()
+
+	output := NewBulkOutput(
+		&testWriter{batch},
+		nopFormatter{},
+		3)
+	output.SetFilters(IgnoreMessagesMatching("Commencing"))
+	logger := GetLogger().WithOutput(output)
+
+	logger.Info("Ground control to Major Tom")
+	logger.Info("Commencing countdown")
+	logger.Info("Engines on")
+	select {
+	case <-batch:
+		require.Fail(t, "Row was not filtered")
+	case <-timeout:
+	}
+	logger.Info("Liftoff")
+	<-batch
+}
+
+func TestBulkOutput_Append_Http(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 

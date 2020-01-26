@@ -29,11 +29,19 @@ type bulkOutput struct {
 
 	bulkSize int
 
-	lock *sync.Mutex
-	logs []*row
+	lock    *sync.Mutex
+	logs    []*row
+	filters and
+}
+
+func (out *bulkOutput) SetFilters(filters ...Filter) {
+	out.filters = and{filters}
 }
 
 func (out *bulkOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
+	if !out.filters.Allows(level, message, fields) {
+		return
+	}
 	row := &row{level, time.Now(), message, fields}
 
 	out.lock.Lock()

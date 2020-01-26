@@ -15,9 +15,18 @@ import (
 type basicOutput struct {
 	formatter LogFormatter
 	writer    io.Writer
+	filters   and
+}
+
+func (out *basicOutput) SetFilters(filters ...Filter) {
+	out.filters = and{filters}
 }
 
 func (out *basicOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
+	if !out.filters.Allows(level, message, fields) {
+		return
+	}
+
 	logLine := out.formatter.FormatRow(time.Now(), level, message, fields...)
 	_, err := fmt.Fprintln(out.writer, logLine)
 	if err != nil {
@@ -26,5 +35,5 @@ func (out *basicOutput) Append(onError func(err error), level string, message st
 }
 
 func NewFormattingOutput(writer io.Writer, formatter LogFormatter) Output {
-	return &basicOutput{formatter, writer}
+	return &basicOutput{formatter: formatter, writer: writer}
 }

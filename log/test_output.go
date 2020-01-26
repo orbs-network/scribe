@@ -40,6 +40,9 @@ type TestOutput struct {
 	testTerminated       bool
 }
 
+func (o *TestOutput) SetFilters(_ ...Filter) {
+}
+
 // assumes read lock (o.RLock())
 func (o *TestOutput) allowed(message string, fields []*Field) bool {
 	for _, allowedPattern := range o.allowedErrorPatterns {
