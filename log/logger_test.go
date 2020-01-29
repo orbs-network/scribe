@@ -327,12 +327,19 @@ type panickingOutput struct {
 	errObj interface{}
 }
 
+func (p *panickingOutput) SetFilters(_ ...Filter) {
+	panic(p.errObj)
+}
+
 func (p *panickingOutput) Append(onError func(err error), level string, message string, fields ...*Field) {
 	panic(p.errObj)
 }
 
 type erroneousOutput struct {
 	err error
+}
+
+func (p *erroneousOutput) SetFilters(_ ...Filter) {
 }
 
 func (p *erroneousOutput) Append(onError func(err error), level string, message string, fields ...*Field) {

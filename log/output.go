@@ -8,4 +8,5 @@ package log
 
 type Output interface {
 	Append(onError func(err error), level string, message string, fields ...*Field)
+	SetFilters(filter ...Filter)
 }

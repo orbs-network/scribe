@@ -36,6 +36,10 @@ func Or(filters ...Filter) Filter {
 	return &or{filters}
 }
 
+func And(filters ...Filter) Filter {
+	return &and{filters}
+}
+
 func OnlyErrors() Filter {
 	return &onlyErrors{}
 }
@@ -178,6 +182,19 @@ func (f *or) Allows(level string, message string, fields []*Field) bool {
 	}
 
 	return result
+}
+
+type and struct {
+	filters []Filter
+}
+
+func (f *and) Allows(level string, message string, fields []*Field) bool {
+	for _, f1 := range f.filters {
+		if !f1.Allows(level, message, fields) {
+			return false
+		}
+	}
+	return true
 }
 
 type discardAll struct {
